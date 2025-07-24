@@ -7,6 +7,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
@@ -25,7 +26,11 @@ func Register(c *fiber.Ctx) error {
 		return c.Status(400).SendString("Invalid input")
 	}
 	user.ID = uint(len(users) + 1)
-	// ในโปรเจกต์จริงควร Hash รหัสผ่านด้วย bcrypt
+
+	hashpassword, _ := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	user.Password = string(hashpassword)
+	fmt.Println("Hash : ", user.Password)
+
 	users = append(users, user)
 	return c.JSON(fiber.Map{"message": "Register success"})
 }
@@ -37,7 +42,8 @@ func Login(c *fiber.Ctx) error {
 	}
 	// ตรวจสอบว่า username/password ตรงหรือไม่
 	for _, u := range users {
-		if u.Username == creds.Username && u.Password == creds.Password {
+		err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(creds.Password))
+		if err == nil {
 			// สร้าง JWT token
 			token := jwt.New(jwt.SigningMethodHS256)
 			claims := token.Claims.(jwt.MapClaims)
