@@ -6,11 +6,33 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func Getbooks(c *fiber.Ctx) error {
+// Handler functions
+
+// getBooks godoc
+// @Summary Get all books
+// @Description Get details of all books
+// @Tags books
+// @Accept  json
+// @Produce  json
+// @Security BearerAuth
+// @Success 200 {array} Book
+// @Router /books [get]
+func getBooks(c *fiber.Ctx) error {
 	return c.JSON(books)
 }
 
-func Getbook(c *fiber.Ctx) error {
+// getBook godoc
+// @Summary Get a book by ID
+// @Description Get book details by ID
+// @Tags books
+// @Produce  json
+// @Param id path int true "Book ID"
+// @Success 200 {object} Book
+// @Failure 400 {string} string "Bad Request"
+// @Failure 404 {string} string "Not Found"
+// @Router /books/{id} [get]
+// @Security BearerAuth
+func getBook(c *fiber.Ctx) error {
 	bookId, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).SendString((err.Error()))
@@ -24,7 +46,18 @@ func Getbook(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNotFound)
 }
 
-func CreateBook(c *fiber.Ctx) error {
+// createBook godoc
+// @Summary Post new book
+// @Description Create a new book
+// @Tags books
+// @Accept json
+// @Produce json
+// @Param book body Book true "Book info"
+// @Success 201 {object} Book
+// @Failure 400 {string} string "Bad Request"
+// @Router /books [post]
+// @Security BearerAuth
+func createBook(c *fiber.Ctx) error {
 	book := new(Book)
 	if err := c.BodyParser(book); err != nil {
 		return c.Status(fiber.StatusBadRequest).SendString((err.Error()))
@@ -33,7 +66,20 @@ func CreateBook(c *fiber.Ctx) error {
 	return c.JSON(book)
 }
 
-func UpdateBook(c *fiber.Ctx) error {
+// updateBook godoc
+// @Summary Update detail of a book
+// @Description Update detail of a book by ID
+// @Tags books
+// @Accept json
+// @Produce json
+// @Param id path int true "Book ID"
+// @Param book body Book true "Update book info"
+// @Success 200 {object} Book
+// @Failure 400 {string} string "Bad Request"
+// @Failure 404 {string} string "Not Found"
+// @Router /books/{id} [put]
+// @Security BearerAuth
+func updateBook(c *fiber.Ctx) error {
 	bookId, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).SendString((err.Error()))
@@ -48,14 +94,26 @@ func UpdateBook(c *fiber.Ctx) error {
 		if book.ID == bookId {
 			books[i].Title = bookUpdate.Title
 			books[i].Author = bookUpdate.Author
-			return c.JSON(books[i])
+			return c.Status(fiber.StatusOK).JSON(books[i])
 		}
 	}
 	return c.SendStatus(fiber.StatusNotFound)
 
 }
 
-func DeleteBook(c *fiber.Ctx) error {
+// deleteBook godoc
+// @Summary Delete all details of a book
+// @Description Delete detail of a book by ID
+// @Tags books
+// @Accept json
+// @Produce json
+// @Param id path int true "Book ID"
+// @Success 204 {string} string "StatusNoContent"
+// @Failure 400 {string} string "Bad Request"
+// @Failure 404 {string} string "Not Found"
+// @Router /books/{id} [delete]
+// @Security BearerAuth
+func deleteBook(c *fiber.Ctx) error {
 	bookId, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).SendString((err.Error()))
@@ -68,17 +126,4 @@ func DeleteBook(c *fiber.Ctx) error {
 		}
 	}
 	return c.SendStatus(fiber.StatusNotFound)
-}
-
-func uploadFile(c *fiber.Ctx) error {
-	file, err := c.FormFile("image")
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).SendString(err.Error())
-	}
-	err = c.SaveFile(file, "./uploads/"+file.Filename)
-
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
-	}
-	return c.SendString("File upload complete!")
 }
