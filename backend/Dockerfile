@@ -1,23 +1,16 @@
+# Build Stage
 # ใช้ base image ของ Go
-FROM golang:1.24.4-alpine
+FROM golang:1.24.4-alpine AS builder
 
-# กำหนด directory ใน container
 WORKDIR /app
-
-# copy go.mod และ go.sum
 COPY go.mod go.sum ./
-
-# ดาวน์โหลด dependencies
 RUN go mod download
-
-# copy ไฟล์โค้ดทั้งหมด
 COPY . .
-
-# build binary
 RUN go build -o main .
 
-# expose port
+# Run Stage
+FROM alpine:latest
+WORKDIR /app
+COPY --from=builder /app/main .
 EXPOSE 8000
-
-# run binary
 CMD ["./main"]
