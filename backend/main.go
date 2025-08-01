@@ -19,9 +19,16 @@ var db *gorm.DB
 
 func init() {
 	// โหลด environment variables จากไฟล์ .env
-	err := godotenv.Load()
+	err := godotenv.Load("../.env")
 	if err != nil {
 		log.Fatal("Error loading .env file")
+	}
+	var host string
+	if os.Getenv("DB_HOST_LOCAL") != "" {
+		host = os.Getenv("DB_HOST_LOCAL")
+	} else {
+		// ถ้าไม่มี ให้ใช้ DB_HOST ซึ่งเป็นชื่อ service ของ Docker
+		host = os.Getenv("DB_HOST")
 	}
 
 	// แปลงค่า DB_PORT จาก string เป็น int
@@ -35,7 +42,7 @@ func init() {
 		"%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		os.Getenv("DB_USER"),
 		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_HOST"),
+		host,
 		port,
 		os.Getenv("DB_NAME"),
 	)
@@ -56,9 +63,7 @@ func init() {
 		DSN:                       dsn,
 		DefaultStringSize:         256,
 		SkipInitializeWithVersion: false,
-	}), &gorm.Config{
-		Logger: newLogger, // แก้ไข: ใช้ Logger ตัวพิมพ์ใหญ่
-	})
+	}), &gorm.Config{Logger: newLogger})
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
@@ -69,6 +74,8 @@ func init() {
 
 func main() {
 	app := fiber.New()
+
+	print(db)
 
 	// แก้ไข: โค้ดของ Fiber v2 ต้องมี return เสมอ
 	app.Get("/", func(c *fiber.Ctx) error {
