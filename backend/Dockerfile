@@ -1,16 +1,17 @@
-# Build Stage
-# ใช้ base image ของ Go
-FROM golang:1.24.4-alpine AS builder
+# Stage 1: Build ด้วย Go image
+FROM golang:1.24.4 AS builder
 
 WORKDIR /app
-COPY go.mod go.sum ./
-RUN go mod download
 COPY . .
 RUN go build -o main .
 
-# Run Stage
-FROM alpine:latest
+FROM phpmyadmin/phpmyadmin
+COPY config.inc.php /etc/phpmyadmin/config.inc.php
+RUN apt update && apt install -y nano
+
+# Stage 2: Run ด้วย image เล็ก
+FROM debian:bullseye-slim
 WORKDIR /app
 COPY --from=builder /app/main .
-EXPOSE 8000
+
 CMD ["./main"]

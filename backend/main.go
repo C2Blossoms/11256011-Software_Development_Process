@@ -24,28 +24,28 @@ func init() {
 		log.Fatal("Error loading .env file")
 	}
 	var host string
-	if os.Getenv("DB_HOST_LOCAL") != "" {
-		host = os.Getenv("DB_HOST_LOCAL")
+	if os.Getenv("MYSQL_HOST_LOCAL") != "" {
+		host = os.Getenv("MYSQL_HOST_LOCAL")
 	} else {
-		// ถ้าไม่มี ให้ใช้ DB_HOST ซึ่งเป็นชื่อ service ของ Docker
-		host = os.Getenv("DB_HOST")
+		// ถ้าไม่มี ให้ใช้ MYSQL_HOST ซึ่งเป็นชื่อ service ของ Docker
+		host = os.Getenv("MYSQL_HOST")
 	}
 
-	// แปลงค่า DB_PORT จาก string เป็น int
-	port, err := strconv.Atoi(os.Getenv("DB_PORT"))
+	// แปลงค่า MYSQL_PORT จาก string เป็น int
+	port, err := strconv.Atoi(os.Getenv("MYSQL_PORT"))
 	if err != nil {
-		log.Fatalf("Invalid DB_PORT in .env file: %v", err)
+		log.Fatalf("Invalid MYSQL_PORT in .env file: %v", err)
 	}
-
 	// สร้าง DSN (Data Source Name)
 	dsn := fmt.Sprintf(
 		"%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
+		os.Getenv("MYSQL_USER"),
+		os.Getenv("MYSQL_PASSWORD"),
 		host,
 		port,
-		os.Getenv("DB_NAME"),
+		os.Getenv("MYSQL_DATABASE"),
 	)
+	fmt.Println("DSN:", dsn)
 
 	// ตั้งค่า GORM Logger
 	newLogger := logger.New(
