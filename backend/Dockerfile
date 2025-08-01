@@ -1,5 +1,5 @@
 # ใช้ base image ของ Go
-FROM golang:1.20-alpine
+FROM golang:1.24.4-alpine
 
 # กำหนด directory ใน container
 WORKDIR /app
