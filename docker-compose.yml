@@ -1,12 +1,6 @@
 version: '3.8'
 # ลบ version attribute ออก เพื่อหลีกเลี่ยง warning
 services:
-  api:
-    build:
-      context: ./api
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
   # 1. Backend Service (Go)
   backend:
     build:
@@ -69,20 +63,20 @@ services:
     image: phpmyadmin/phpmyadmin:latest
     container_name: phpmyadmin
     ports:
-      - "8081:80"
+      - "8080:80"
     env_file:
       - .env
     environment:
-      MYSQL_HOST: ${MYSQL_HOST}
-      MYSQL_PORT: ${MYSQL_PORT}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      - PMA_HOST=${MYSQL_HOST}
+      - MYSQL_PORT=${MYSQL_PORT}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
     depends_on:
       mysql:
         condition: service_healthy
     networks:
       - ecommerce-network
     volumes:
-      - ./config.inc.php:/etc/phpmyadmin/config.inc.php
+      - ./config.inc.php:/etc/phpmyadmin/config.user.inc.php
     restart: unless-stopped
       
 networks:
