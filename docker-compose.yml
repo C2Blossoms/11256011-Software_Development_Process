@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  # 1. Backend Service (Go)
+  backend:
+    build:
+      context: ./backend # ใช้ Dockerfile ที่อยู่ในโฟลเดอร์ ./backend
+    container_name: go-backend
+    ports:
+      - "8000:8000" # Map พอร์ต 8000 ของเครื่องคุณไปที่พอร์ต 8000 ของ Go backend
+    volumes:
+      - ./backend:/app # Mount โค้ด Go ของคุณเข้าไปในคอนเทนเนอร์
+    environment:
+      - DB_HOST=mysql
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${MYSQL_DATABASE}
+      - DB_PORT=3306
+    depends_on:
+      - mysql
+    networks:
+      - ecommerce-network
+
+  # 2. Frontend Service (HTML/CSS/JavaScript)
+  frontend:
+    image: nginx:latest # ใช้ Nginx เพื่อทำหน้าที่เป็น web server
+    container_name: frontend-webserver
+    ports:
+      - "80:80" # Map พอร์ต 80 ของเครื่องคุณไปที่พอร์ต 80 ของ Nginx
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro # Mount โค้ด frontend ของคุณแบบ Read-Only
+    networks:
+      - ecommerce-network
+
+  # 3. Database Service (MySQL)
+  mysql:
+    image: mysql:8.0 # ใช้ MySQL 8.0
+    container_name: mysql-db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    volumes:
+      - mysql_data:/var/lib/mysql # ใช้ named volume เพื่อเก็บข้อมูล database
+    networks:
+      - ecommerce-network
+
+  # 4. Database Management Tool (phpMyAdmin)
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: phpmyadmin
+    ports:
+      - "8080:80" # เข้าถึง phpMyAdmin ที่พอร์ต 8080 ของเครื่องคุณ
+    environment:
+      PMA_HOST: mysql
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    depends_on:
+      - mysql
+    networks:
+      - ecommerce-network
+
+networks:
+  ecommerce-network:
+    driver: bridge # สร้าง network เสมือนเพื่อให้ทุก services คุยกันได้
+
+volumes:
+  mysql_data: # กำหนด named volume สำหรับเก็บข้อมูล MySQL
