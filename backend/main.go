@@ -7,14 +7,13 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gofiber/fiber/v2" // แก้ไข import เป็น fiber/v2
+	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
-// แก้ไข: ประกาศตัวแปร db ให้เป็นประเภท *gorm.DB
 var db *gorm.DB
 
 func init() {
@@ -70,17 +69,29 @@ func init() {
 
 	// GORM มีการตรวจสอบการเชื่อมต่อให้แล้ว ไม่จำเป็นต้อง ping เอง
 	log.Println("Successfully connected to the database!")
+	db.AutoMigrate(&Product{})
+	fmt.Println("Database migrated successfully!")
 }
 
 func main() {
 	app := fiber.New()
 
-	print(db)
-
 	// แก้ไข: โค้ดของ Fiber v2 ต้องมี return เสมอ
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("Hello, World!")
 	})
+
+	app.Get("/products/:id", GetProductHandler(db))
+
+	app.Get("/products", GetAllProductsHandler(db))
+
+	app.Post("/products", CreateProductHandler(db))
+
+	app.Put("/products/:id", UpdateProductHandler(db))
+
+	app.Patch("/products/:id", UpdateProductHandler(db))
+
+	app.Delete("/products/:id", DeleteProductHandler(db))
 
 	app.Listen(":8000")
 }
