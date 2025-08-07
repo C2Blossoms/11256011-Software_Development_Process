@@ -38,13 +38,14 @@ func createProduct(db *gorm.DB, p *Product) error {
 	return nil
 }
 
-func updateProduct(db *gorm.DB, id uint) error {
+func updateProduct(db *gorm.DB, id uint, new *Product) error {
 	var product Product
+
 	result := db.First(&product, id)
 	if result.Error != nil {
 		return result.Error
 	}
-	if err := db.Save(&product).Error; err != nil {
+	if err := db.Model(&product).Updates(new).Error; err != nil {
 		return err
 	}
 	return nil
