@@ -1,5 +1,3 @@
-version: '3.8'
-# ลบ version attribute ออก เพื่อหลีกเลี่ยง warning
 services:
   # 1. Backend Service (Go)
   backend:

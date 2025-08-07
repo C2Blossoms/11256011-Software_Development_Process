@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/joho/godotenv"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -17,19 +16,6 @@ import (
 var db *gorm.DB
 
 func init() {
-	// โหลด environment variables จากไฟล์ .env
-	err := godotenv.Load("../.env")
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-	var host string
-	if os.Getenv("MYSQL_HOST_LOCAL") != "" {
-		host = os.Getenv("MYSQL_HOST_LOCAL")
-	} else {
-		// ถ้าไม่มี ให้ใช้ MYSQL_HOST ซึ่งเป็นชื่อ service ของ Docker
-		host = os.Getenv("MYSQL_HOST")
-	}
-
 	// แปลงค่า MYSQL_PORT จาก string เป็น int
 	port, err := strconv.Atoi(os.Getenv("MYSQL_PORT"))
 	if err != nil {
@@ -40,7 +26,7 @@ func init() {
 		"%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		os.Getenv("MYSQL_USER"),
 		os.Getenv("MYSQL_PASSWORD"),
-		host,
+		os.Getenv("PMA_HOST"),
 		port,
 		os.Getenv("MYSQL_DATABASE"),
 	)

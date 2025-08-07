@@ -74,13 +74,19 @@ func CreateProductHandler(db *gorm.DB) fiber.Handler {
 
 func UpdateProductHandler(db *gorm.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		product := new(Product)
 		id, err := strconv.Atoi(c.Params("id"))
 		if err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"error": "Invalid product ID",
 			})
 		}
-		if err := updateProduct(db, uint(id)); err != nil {
+		if err := c.BodyParser(product); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Failed to parse request body",
+			})
+		}
+		if err := updateProduct(db, uint(id), product); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": "Failed to update product",
 			})
