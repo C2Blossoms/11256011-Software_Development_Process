@@ -59,3 +59,18 @@ func deleteProduct(db *gorm.DB, id uint) error {
 	}
 	return nil
 }
+
+func RestoreProduct(db *gorm.DB, productID uint) error {
+	result := db.Unscoped().
+		Model(&Product{}).
+		Where("id = ?", productID).
+		Update("deleted_at", nil)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+
+	return nil
+}

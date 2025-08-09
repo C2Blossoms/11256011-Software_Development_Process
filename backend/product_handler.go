@@ -115,3 +115,23 @@ func DeleteProductHandler(db *gorm.DB) fiber.Handler {
 		})
 	}
 }
+
+func RestoreProductHandler(db *gorm.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		productID, err := strconv.Atoi(c.Params("id"))
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Invalid Product ID",
+			})
+		}
+		err = RestoreProduct(db, uint(productID))
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to restore product",
+			})
+		}
+		return c.JSON(fiber.Map{
+			"message": "Product restored successfully",
+		})
+	}
+}
