@@ -1,4 +1,4 @@
-package main
+package models
 
 import (
 	"gorm.io/gorm"
@@ -12,7 +12,7 @@ type Product struct {
 	Price    int    `json:"Price" gorm:"not null"`
 }
 
-func getProduct(db *gorm.DB, id uint) (*Product, error) {
+func GetProduct(db *gorm.DB, id uint) (*Product, error) {
 	var product Product
 	result := db.First(&product, id)
 	if result.Error != nil {
@@ -21,7 +21,7 @@ func getProduct(db *gorm.DB, id uint) (*Product, error) {
 	return &product, nil
 }
 
-func getAllProducts(db *gorm.DB) ([]Product, error) {
+func GetAllProducts(db *gorm.DB) ([]Product, error) {
 	var products []Product
 	result := db.Find(&products)
 	if result.Error != nil {
@@ -30,7 +30,7 @@ func getAllProducts(db *gorm.DB) ([]Product, error) {
 	return products, nil
 }
 
-func createProduct(db *gorm.DB, p *Product) error {
+func CreateProduct(db *gorm.DB, p *Product) error {
 	result := db.Create(p)
 	if result.Error != nil {
 		return result.Error
@@ -38,7 +38,7 @@ func createProduct(db *gorm.DB, p *Product) error {
 	return nil
 }
 
-func updateProduct(db *gorm.DB, id uint, new *Product) error {
+func UpdateProduct(db *gorm.DB, id uint, new *Product) error {
 	var product Product
 
 	result := db.First(&product, id)
@@ -51,8 +51,7 @@ func updateProduct(db *gorm.DB, id uint, new *Product) error {
 	return nil
 }
 
-func deleteProduct(db *gorm.DB, id uint) error {
-
+func DeleteProduct(db *gorm.DB, id uint) error {
 	result := db.Delete(&Product{}, id)
 	if result.Error != nil {
 		return result.Error

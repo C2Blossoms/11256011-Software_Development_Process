@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/C2Blossoms/Project_SDP/backend/handlers"
+	"github.com/C2Blossoms/Project_SDP/backend/models"
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/mysql"
@@ -60,7 +62,7 @@ func init() {
 
 	// GORM มีการตรวจสอบการเชื่อมต่อให้แล้ว ไม่จำเป็นต้อง ping เอง
 	log.Println("Successfully connected to the database!")
-	db.AutoMigrate(&Product{})
+	db.AutoMigrate(&models.Product{}, &models.User{})
 	fmt.Println("Database migrated successfully!")
 }
 
@@ -72,19 +74,23 @@ func main() {
 		return c.SendString("Hello, World!")
 	})
 
-	app.Get("/product/:id", GetProductHandler(db))
+	app.Get("/product/:id", handlers.GetProductHandler(db))
 
-	app.Get("/products", GetAllProductsHandler(db))
+	app.Get("/products", handlers.GetAllProductsHandler(db))
 
-	app.Post("/product/create", CreateProductHandler(db))
+	app.Post("/product/create", handlers.CreateProductHandler(db))
 
-	app.Put("/product/update/:id", UpdateProductHandler(db))
+	app.Put("/product/update/:id", handlers.UpdateProductHandler(db))
 
-	app.Patch("/product/patch/:id", UpdateProductHandler(db))
+	app.Patch("/product/patch/:id", handlers.UpdateProductHandler(db))
 
-	app.Delete("/product/del/:id", DeleteProductHandler(db))
+	app.Delete("/product/del/:id", handlers.DeleteProductHandler(db))
 
-	app.Put("/product/restore/:id", RestoreProductHandler(db))
+	app.Put("/product/restore/:id", handlers.RestoreProductHandler(db))
+
+	app.Post("/register", handlers.RegisterHandler(db))
+
+	app.Post("/login", handlers.LoginHandler(db))
 
 	app.Listen(":8000")
 }
