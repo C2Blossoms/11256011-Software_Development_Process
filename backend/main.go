@@ -92,5 +92,7 @@ func main() {
 
 	app.Post("/login", handlers.LoginHandler(db))
 
+	app.Post("/login/oauth", handlers.OAuthLoginHandler(db))
+
 	app.Listen(":8000")
 }
