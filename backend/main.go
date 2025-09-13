@@ -1,98 +1,112 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
 	"log"
+	"net/http"
 	"os"
-	"strconv"
-	"time"
+	"runtime/debug"
 
-	"github.com/C2Blossoms/Project_SDP/backend/handlers"
+	"github.com/C2Blossoms/Project_SDP/backend/config"
+	"github.com/C2Blossoms/Project_SDP/backend/db"
+	"github.com/C2Blossoms/Project_SDP/backend/http/handlers"
+	"github.com/C2Blossoms/Project_SDP/backend/http/middleware"
 	"github.com/C2Blossoms/Project_SDP/backend/models"
-	"github.com/gofiber/fiber/v2"
-	"github.com/joho/godotenv"
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
+	"github.com/C2Blossoms/Project_SDP/backend/oauth"
+	"github.com/C2Blossoms/Project_SDP/backend/security"
 	"gorm.io/gorm/logger"
 )
 
-var db *gorm.DB
-
-func init() {
-	err := godotenv.Load("../.env")
-	if err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
-	}
-	// แปลงค่า MYSQL_PORT จาก string เป็น int
-	port, err := strconv.Atoi(os.Getenv("MYSQL_PORT"))
-	if err != nil {
-		log.Fatalf("Invalid MYSQL_PORT in .env file: %v", err)
-	}
-	// สร้าง DSN (Data Source Name)
-	dsn := fmt.Sprintf(
-		"%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		os.Getenv("MYSQL_USER"),
-		os.Getenv("MYSQL_PASSWORD"),
-		os.Getenv("MYSQL_HOST_LOCAL"),
-		port,
-		os.Getenv("MYSQL_DATABASE"),
-	)
-	fmt.Println("DSN:", dsn)
-
-	// ตั้งค่า GORM Logger
-	newLogger := logger.New(
-		log.New(os.Stdout, "\r\n", log.LstdFlags),
-		logger.Config{
-			SlowThreshold:             time.Second,
-			LogLevel:                  logger.Info,
-			IgnoreRecordNotFoundError: true,
-			Colorful:                  true,
-		},
-	)
-
-	// Initialize database connection
-	db, err = gorm.Open(mysql.New(mysql.Config{
-		DSN:                       dsn,
-		DefaultStringSize:         256,
-		SkipInitializeWithVersion: false,
-	}), &gorm.Config{Logger: newLogger})
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
-	}
-
-	// GORM มีการตรวจสอบการเชื่อมต่อให้แล้ว ไม่จำเป็นต้อง ping เอง
-	log.Println("Successfully connected to the database!")
-	db.AutoMigrate(&models.Product{}, &models.User{})
-	fmt.Println("Database migrated successfully!")
-}
-
 func main() {
-	app := fiber.New()
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatalf("Config error: %v", err)
+	}
 
-	// แก้ไข: โค้ดของ Fiber v2 ต้องมี return เสมอ
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("Hello, World!")
+	gdb, err := db.Open(cfg, logger.Info)
+	if err != nil {
+		log.Fatalf("DB open error: %v", err)
+	}
+
+	if cfg.DBAutoMigrate {
+		if err := gdb.AutoMigrate(&models.User{}, &models.OAuthAccount{}, &models.RefreshToken{}); err != nil {
+			log.Fatalf("Automigrate error: %v", err)
+		}
+		log.Println("DB Migrate.")
+	}
+
+	providers := oauth.NewProviderFromEnv()
+	log.Printf("oauth providers loaded: %v", providers.Names())
+
+	jwtMgr := security.NewJWTManager(cfg)
+	authDeps := &handlers.AuthDeps{DB: gdb, JWT: jwtMgr}
+	oauthDeps := &handlers.OAuthDeps{DB: gdb, Providers: providers, JWT: jwtMgr}
+	authMw := &middleware.Auth{JWT: jwtMgr}
+
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("GET /auth/oauth/{provider}/start", oauthDeps.OAuthStart)
+	mux.HandleFunc("GET /auth/oauth/{provider}/callback", oauthDeps.OAuthCallback)
+	mux.HandleFunc("POST /auth/register", authDeps.Register)
+	mux.HandleFunc("POST /auth/login", authDeps.Login)
+	mux.HandleFunc("POST /auth/refresh", authDeps.Refresh)
+	mux.HandleFunc("POST /auth/logout", authDeps.Logout)
+
+	mux.Handle("/me", authMw.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		uid, ok := middleware.UserIDFrom(r)
+		if !ok {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		authDeps.Me(w, r, uid)
+	})))
+
+	// Healthcheck
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	})
 
-	app.Get("/product/:id", handlers.GetProductHandler(db))
+	handler := recoverMW(cors(mux))
 
-	app.Get("/products", handlers.GetAllProductsHandler(db))
+	addr := ":" + defaultIfEmpty(os.Getenv("PORT"), "8000")
+	log.Println("Listening on", addr)
+	if err := http.ListenAndServe(addr, handler); err != nil {
+		log.Fatal(err)
+	}
+}
 
-	app.Post("/product/create", handlers.CreateProductHandler(db))
+func cors(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Vary", "Origin")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
 
-	app.Put("/product/update/:id", handlers.UpdateProductHandler(db))
+func defaultIfEmpty(v, d string) string {
+	if v == "" {
+		return d
+	}
+	return v
+}
 
-	app.Patch("/product/patch/:id", handlers.UpdateProductHandler(db))
-
-	app.Delete("/product/del/:id", handlers.DeleteProductHandler(db))
-
-	app.Put("/product/restore/:id", handlers.RestoreProductHandler(db))
-
-	app.Post("/register", handlers.RegisterHandler(db))
-
-	app.Post("/login", handlers.LoginHandler(db))
-
-	app.Post("/login/oauth", handlers.OAuthLoginHandler(db))
-
-	app.Listen(":8000")
+func recoverMW(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if rec := recover(); rec != nil {
+				stack := debug.Stack()
+				log.Printf("PANIC %s %s : %v\n%s", r.Method, r.URL.Path, rec, stack)
+				http.Error(w, "internal server error", http.StatusInternalServerError)
+			}
+		}()
+		log.Printf("CALL %s %s", r.Method, r.URL.Path) // trace request เข้า
+		next.ServeHTTP(w, r)
+	})
 }

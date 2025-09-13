@@ -1,0 +1,36 @@
+# Binaries
+/server
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.out
+
+# Go coverage
+*.test
+*.prof
+coverage.out
+
+# Logs
+*.log
+**/*.log
+
+# Env files (ไม่ push secret ขึ้น git)
+.env
+*.local
+
+# Node / Frontend
+node_modules/
+dist/
+build/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
