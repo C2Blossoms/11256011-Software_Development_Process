@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+
 	"runtime/debug"
 
 	"github.com/C2Blossoms/Project_SDP/backend/config"
@@ -29,7 +30,7 @@ func main() {
 	}
 
 	if cfg.DBAutoMigrate {
-		if err := gdb.AutoMigrate(&models.User{}, &models.OAuthAccount{}, &models.RefreshToken{}); err != nil {
+		if err := gdb.AutoMigrate(&models.User{}, &models.OAuthAccount{}, &models.RefreshToken{} /*, &models.Product{}*/); err != nil {
 			log.Fatalf("Automigrate error: %v", err)
 		}
 		log.Println("DB Migrate.")
