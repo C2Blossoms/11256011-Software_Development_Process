@@ -52,4 +52,9 @@ replacements.txt
 !**/.env.example
 >>>>>>> 293a7c8 (docs: safe placeholders in .env.example)
 frontend/.env
+<<<<<<< HEAD
 >>>>>>> f701b0b (chore: ignore .env files and stop tracking them)
+=======
+
+replacements.txt
+>>>>>>> 7f2ef86 (chore: ignore local tooling files)
