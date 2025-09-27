@@ -35,8 +35,8 @@ build/
 # OS files
 .DS_Store
 Thumbs.db
-.env
 
+<<<<<<< HEAD
 .env
 
 .env
@@ -45,5 +45,11 @@ Thumbs.db
 replacements.txt
 =======
 .env
+=======
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+>>>>>>> 293a7c8 (docs: safe placeholders in .env.example)
 frontend/.env
 >>>>>>> f701b0b (chore: ignore .env files and stop tracking them)
