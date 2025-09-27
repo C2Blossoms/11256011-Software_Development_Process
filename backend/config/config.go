@@ -33,19 +33,21 @@ type Config struct {
 }
 
 func LoadConfig() (Config, error) {
-	_ = godotenv.Load("../.env")
+	// Load .env file
+	_ = godotenv.Load()
 	var c Config
 	var err error
 
+	// Query form env
 	c.Env = os.Getenv("APP_ENV")
 	c.MySQLUser = first(os.Getenv("DB_USER"), os.Getenv("MYSQL_USER"))
 	c.MySQLPassword = first(os.Getenv("DB_PASSWORD"), os.Getenv("MYSQL_PASSWORD"))
 	c.MySQLHost = first(os.Getenv("DB_HOST"), os.Getenv("MYSQL_HOST"), "mysql")
 	c.MySQLDB = first(os.Getenv("DB_NAME"), os.Getenv("MYSQL_DATABASE"))
-
 	p := first(os.Getenv("DB_PORT"), os.Getenv("MYSQL_PORT"), "3306")
+
 	if c.MySQLUser == "" || c.MySQLPassword == "" || c.MySQLHost == "" || c.MySQLDB == "" || p == "" {
-		return c, fmt.Errorf("Missing required .env")
+		return c, fmt.Errorf("Missing required .env: %w", err)
 	}
 
 	c.MySQLPORT, err = strconv.Atoi(p)
@@ -56,7 +58,7 @@ func LoadConfig() (Config, error) {
 	c.JWTAccess = []byte(os.Getenv("JWT_ACCESS_SECRET"))
 	c.JWTRefresh = []byte(os.Getenv("JWT_REFRESH_SECRET"))
 	if len(c.JWTAccess) == 0 || len(c.JWTRefresh) == 0 {
-		return c, fmt.Errorf("Missing JWT Secret")
+		return c, fmt.Errorf("Missing JWT Secret: %w", err)
 	}
 
 	accessMin, _ := strconv.Atoi(defaultIfEmpty(os.Getenv("ACCESS_TTL_MIN"), "15"))

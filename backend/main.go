@@ -1,7 +1,7 @@
 package main
 
 import (
-	"encoding/json"
+	//"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -63,8 +63,10 @@ func main() {
 	})))
 
 	// Healthcheck
-	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
-		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		//_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+		w.WriteHeader(200)
+		w.Write([]byte("ok"))
 	})
 
 	handler := recoverMW(cors(mux))
