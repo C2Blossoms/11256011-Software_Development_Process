@@ -6,6 +6,7 @@
 *.so
 *.dylib
 *.out
+*.test
 
 # Go coverage
 *.test
