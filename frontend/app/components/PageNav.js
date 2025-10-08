@@ -10,7 +10,7 @@ export default function PageNav() {
   }
   return (
     <>
-      <div className="w-screen h-0 z-2">
+      <div className="bg-black h-110 z-3">
         <ul className="nav-list relative top-10 justify-center flex items-center gap-[5%] font-[sans-serif] text-xl font-[700] text-nowrap drop-shadow-2xl z-4">
           <li className="nav-item active:text-[#0067D1] hover:underline underline-offset-2 text-shadow-lg/30 drop-shadow-2xl">
             <a href="/" rel="noopener noreferrer">
@@ -37,19 +37,20 @@ export default function PageNav() {
           </li>
           <li>
             <button
-            // onClick={rockinButton}
-            className="rock relative float-right right-[6%] w-30 h-10 font-[700] bg-[#606060] hover:bg-[#0067D1] active:bg-[#003770] rounded-xl focus:outline-2 focus:outline-[#0067D1] z-5">
-            Login 
-          </button>
+              // onClick={rockinButton}
+              className="rock relative float-right right-[6%] w-30 h-10 font-[700] bg-[#606060] hover:bg-[#0067D1] active:bg-[#003770] rounded-xl focus:outline-2 focus:outline-[#0067D1] z-5"
+            >
+              Login
+            </button>
           </li>
         </ul>
 
-        <div className="relative justify-center flex items-center top-20">
+        <div className="relative justify-center flex items-center top-20 z-10">
           <Link href="/" className="logo">
-            <img className="w-300" src="/Vector.png"/>
+            <img className="w-300" src="/Vector.png" />
           </Link>
         </div>
-    </div>
+      </div>
     </>
   );
 }
