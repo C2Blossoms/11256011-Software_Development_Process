@@ -1,6 +1,10 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 type Product struct {
 	ID          uint    `gorm:"primaryKey"`
@@ -12,4 +16,5 @@ type Product struct {
 	Status      string  `gorm:"size:20;not null;default:active"`
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
+	DeletedAt   gorm.DeletedAt `gorm:"index"`
 }

@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"runtime/debug"
 
@@ -30,7 +31,7 @@ func main() {
 	}
 
 	if cfg.DBAutoMigrate {
-		if err := gdb.AutoMigrate(&models.User{}, &models.OAuthAccount{}, &models.RefreshToken{} /*, &models.Product{}*/); err != nil {
+		if err := gdb.AutoMigrate(&models.User{}, &models.OAuthAccount{}, &models.RefreshToken{}, &models.Product{}); err != nil {
 			log.Fatalf("Automigrate error: %v", err)
 		}
 		log.Println("DB Migrate.")
@@ -43,6 +44,7 @@ func main() {
 	authDeps := &handlers.AuthDeps{DB: gdb, JWT: jwtMgr}
 	oauthDeps := &handlers.OAuthDeps{DB: gdb, Providers: providers, JWT: jwtMgr}
 	authMw := &middleware.Auth{JWT: jwtMgr}
+	productDeps := &handlers.ProductDeps{DB: gdb}
 
 	mux := http.NewServeMux()
 
@@ -61,6 +63,37 @@ func main() {
 		}
 		authDeps.Me(w, r, uid)
 	})))
+	// Product routes
+	mux.HandleFunc("/products", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			productDeps.ListProducts(w, r)
+		case http.MethodPost:
+			productDeps.CreateProduct(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	mux.HandleFunc("/products/", func(w http.ResponseWriter, r *http.Request) {
+		// /products/{id}/restore
+		if strings.HasSuffix(r.URL.Path, "/restore") && r.Method == http.MethodPost {
+			productDeps.RestoreProduct(w, r)
+			return
+		}
+
+		// /products/{id}
+		switch r.Method {
+		case http.MethodGet:
+			productDeps.GetProduct(w, r)
+		case http.MethodPatch, http.MethodPut:
+			productDeps.UpdateProduct(w, r)
+		case http.MethodDelete:
+			productDeps.DeleteProduct(w, r) // soft delete by default
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
 
 	// Healthcheck
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
