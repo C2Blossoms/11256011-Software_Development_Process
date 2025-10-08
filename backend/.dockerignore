@@ -1,6 +1,7 @@
 # VCS
 .git
 .gitignore
+bin
 README.md
 docker-compose.yml
 
@@ -18,7 +19,9 @@ node_modules
 # Temp & cache
 tmp
 *.tmp
+**/*.tmp
 *.swp
+**/*.swp
 *.bak
 
 # Editor & IDE
@@ -32,3 +35,6 @@ tmp
 server
 *.exe
 *.out
+
+.DS_Store
+**/*.DS_Store

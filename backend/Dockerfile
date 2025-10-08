@@ -1,5 +1,5 @@
 # Stage 1: Build a Go application
-FROM golang:1.25-alpine AS builder
+FROM golang:1.25-alpine AS backend-builder
 
 # ตั้งค่า WORKDIR ภายใน container
 WORKDIR /app
@@ -18,22 +18,26 @@ COPY . .
 # สร้าง binary แบบ static 
 ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
 
-RUN go build -o server .
+RUN go build -o /out/ecom-api ./
 
 # Stage 2: Runtime
 FROM alpine:latest
 
 # ตั้งค่า WORKDIR ภายใน container
-WORKDIR /app
+WORKDIR /srv/ecom-api
 
 # ใส่ zoneifo เผื่อใช้ time zone
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk add --no-cache ca-certificates
+
+# เพิ่ม user ธรรมดาเพื่อความปลอดภัย
+RUN addgroup -S app && adduser -S app -G app
+USER app
 
 # Copy binary file จาก builder stage
-COPY --from=builder /app/server /app/server
+COPY --from=backend-builder /out/ecom-api ./ecom-api
 
 # Expose port ที่ application ใช้
 EXPOSE 8000
 
 # Container รับค่าผ่าน ENV จาก compose
-ENTRYPOINT [ "/app/server" ]
+ENTRYPOINT [ "/srv/ecom-api/ecom-api" ]

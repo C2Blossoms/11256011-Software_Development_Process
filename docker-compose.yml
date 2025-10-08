@@ -13,7 +13,7 @@ services:
       DB_PASSWORD: ${MYSQL_PASSWORD}
       DB_NAME: ${MYSQL_DATABASE}
       DB_PORT: ${MYSQL_PORT}
-      PORT: ${PORT}
+      PORT: ${BACKEND_PORT}
       APP_ENV: ${APP_ENV}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
@@ -21,7 +21,7 @@ services:
       REFRESH_TTL_DAY: ${REFRESH_TTL_DAY}
       DB_AUTOMIGRATE: ${DB_AUTOMIGRATE}
     ports:
-      - "${PORT}:${PORT}"
+      - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:
       mysql:
         condition: service_healthy
@@ -29,17 +29,19 @@ services:
       - ecommerce-network
     restart: unless-stopped
 
-  # 2. Frontend Service (HTML/CSS/JavaScript)
-  # frontend:
-  #   image: nginx:latest
-  #   container_name: frontend-webserver
-  #   ports:
-  #     - "80:80"
-  #   networks:
-  #     - ecommerce-network
-  #   volumes:
-  #     - ./frontend:/usr/share/nginx/html:ro
-  #   restart: unless-stopped
+  # 2. Frontend Service (NGINX)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: web-frontend
+    ports:
+      - "${FRONTEND_PORT}:3000"
+    depends_on:
+      - backend
+    networks:
+      - ecommerce-network
+    restart: unless-stopped
 
   # 3. Database Service (MySQL)
   mysql:
