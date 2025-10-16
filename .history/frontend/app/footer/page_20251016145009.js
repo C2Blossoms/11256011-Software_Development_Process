@@ -114,7 +114,6 @@ export default function PrivacyPolicyPage() {
 
         <p style={{ marginTop: 18, fontStyle: "italic" }}>บังคับใช้ตั้งแต่: 16 ตุลาคม 2025</p>
       </main>
-      <Footer />
     </div> 
   );
 }

@@ -9,7 +9,7 @@ export default function PrivacyPolicyPage() {
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}> 
       <main style={{ padding: 32, maxWidth: 900, margin: "0 auto", lineHeight: 1.7 }}>
-        <h1>นโยบายความเป็นส่วนตัว (Privacy Policy) </h1>
+        <h>นโยบายความเป็นส่วนตัว (Privacy Policy) </h3>
 
         <p>
           เอกสารนี้อธิบายการเก็บรวบรวม ใช้ เปิดเผย และคุ้มครองข้อมูลส่วนบุคคลของผู้ใช้บริการบนเว็บไซต์และแอปพลิเคชันของเรา โปรดอ่านอย่างละเอียดก่อนใช้บริการ หากมีคำถามหรือต้องการใช้สิทธิ โปรดติดต่อทีมงานตามข้อมูลด้านล่าง

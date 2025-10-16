@@ -5,7 +5,7 @@ import { Mousewheel, Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/mousewheel";
 import "swiper/css/pagination";
-
+import Footer from "../components/Footer";
 export default function Home() {
   return (
     <main className="h-screen bg-linear-to-t from-[#1F1F1F] to-black">
@@ -81,7 +81,6 @@ export default function Home() {
           </SwiperSlide>
         </Swiper>
       </div>
-      
     </main>
   );
 }

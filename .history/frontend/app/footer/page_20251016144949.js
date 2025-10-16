@@ -7,7 +7,7 @@ import Footer from "../components/Footer";
 
 export default function PrivacyPolicyPage() {
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}> 
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}></div>  
       <main style={{ padding: 32, maxWidth: 900, margin: "0 auto", lineHeight: 1.7 }}>
         <h1>นโยบายความเป็นส่วนตัว (Privacy Policy) </h1>
 
@@ -114,8 +114,7 @@ export default function PrivacyPolicyPage() {
 
         <p style={{ marginTop: 18, fontStyle: "italic" }}>บังคับใช้ตั้งแต่: 16 ตุลาคม 2025</p>
       </main>
-      <Footer />
-    </div> 
+    
   );
 }
 // ...existing code...
