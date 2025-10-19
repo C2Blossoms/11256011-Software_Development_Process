@@ -4,9 +4,9 @@ import "../globals.css";
 
 export default function CategoryLayout({ children }) {
   return (
-      <div>
-        <PageNav />
-        {children}
-      </div>
+    <div>
+      <PageNav />
+      {children}
+    </div>
   );
 }

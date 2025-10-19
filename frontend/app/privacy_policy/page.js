@@ -211,7 +211,7 @@ export default function PrivacyPolicyPage() {
               href="mailto:support@example.com"
               className="font-medium text-blue-600 underline-offset-4 hover:underline dark:text-blue-400"
             >
-              support@example.com
+              FitnestSupport@gmail.com
             </a>
           </p>
         </section>

@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "FitNest | Footer",
+  title: "FitNest | Payment",
   description: "Build up your Fit",
 };
 export default function Layout({ children }) {
-  return <CategoryLayout title="Footer">{children}</CategoryLayout>;
+  return <CategoryLayout title="Payment Section">{children}</CategoryLayout>;
 }

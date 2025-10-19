@@ -14,7 +14,7 @@
     "swiper": "^11.2.10"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
+    "@tailwindcss/postcss": "^4.1.14",
     "tailwindcss": "^4"
   }
 }

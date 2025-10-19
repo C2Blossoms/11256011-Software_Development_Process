@@ -2,7 +2,7 @@
 import { usePathname } from "next/navigation";
 export default function Footer() {
   const pathname = usePathname();
-  if (pathname === "/") return null;
+  if (pathname === "/", pathname === '/payment') return null;
 
   return (
     <footer className="bg-black text-gray-400 py-10">
@@ -15,7 +15,7 @@ export default function Footer() {
             <li><a href="/dumbell" className="hover:text-gray-200">Dumbbell</a></li>
             <li><a href="/login" className="hover:text-gray-200">Login</a></li>
             <li><a href="/whey_protein" className="hover:text-gray-200">Whey Protein</a></li>
-            <li><a href="/PrivacyPolicy" className="hover:text-gray-200">Privacy Policy</a></li>
+            <li><a href="/privacy_policy" className="hover:text-gray-200">Privacy Policy</a></li>
             <li><a href="/treadmill" className="hover:text-gray-200">Treadmill</a></li>
           </ul>
         </div>
@@ -30,7 +30,7 @@ export default function Footer() {
             <span className="font-semibold">Email:</span> Nice@gmail.com
           </p>
           <p className="text-sm">
-            <span className="font-semibold">Phone:</span> 01-123-4567
+            <span className="font-semibold">Phone:</span> 555-123-4567
           </p>
           <p className="text-sm">
             <span className="font-semibold">Address:</span> KMITL Prince of Chumphon 
@@ -41,13 +41,13 @@ export default function Footer() {
         <div className="space-y-4">
           <h2 className="text-xl font-bold text-white">About Us</h2>
           <p className="text-sm leading-relaxed">
-            ศูนย์รวมอาหารเสริมและอุปกรณ์ฟิตเนส ครบ จบในที่เดียว
+            One-stop center for fitness equipment and nutritional supplements.
           </p>
           <p className="text-sm">
             <span className="font-semibold">Address:</span> 123/45 ถนนสุขภาพดี ตำบลฟิตเนส อำเภอเมือง จังหวัดชุมพร 86120
           </p>
           <p className="text-sm">
-            <span className="font-semibold">Phone:</span> 02-123-4567 | <span className="font-semibold">Email:</span> Fitnest@gmail.com
+            <span className="font-semibold">Phone:</span> 555-123-4567 | <span className="font-semibold">Email:</span> Fitnest@gmail.com
           </p>
           <p className="text-sm">
             <span className="font-semibold">Business Hours:</span>  Every day, 9:00 AM – 6:00 PM
@@ -59,7 +59,7 @@ export default function Footer() {
       <div className="bg-black text-center py-4 mt-8 border-t border-gray-700">
         <p className="text-sm">
           Follow Us: 
-          <a href="#" className="ml-2 text-gray-400 hover:text-white transition-colors">Facebook</a> | 
+          <a href="https://www.facebook.com/keiyrtiys.canthr.pheng/posts/pfbid02Woa748Pn4xTDoojPB5qa1sQQkFnjD63DaY4QiUTdJmWZBDfDw1b4vBaqokKqSVvYl" target="_blank" className="ml-2 text-gray-400 hover:text-white transition-colors">Facebook</a> | 
           <a href="#" className="ml-2 text-gray-400 hover:text-white transition-colors">Instagram</a> | 
           <a href="#" className="ml-2 text-gray-400 hover:text-white transition-colors">YouTube</a>
         </p>

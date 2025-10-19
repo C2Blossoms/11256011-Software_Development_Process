@@ -1,5 +1,5 @@
 "use client";
-
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
 
@@ -8,6 +8,9 @@ export default function PageNav() {
   function rockinButton() {
     window.open("http://localhost:3000/Register", "_blank");
   }
+  const pathname = usePathname();
+    if (pathname === "/", pathname === '/payment', pathname === '/payment/pay_done') return null;
+  
   return (
     <>
       <div className="bg-black h-110 z-3">

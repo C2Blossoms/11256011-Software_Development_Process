@@ -51,7 +51,7 @@ export default function TreadmillPage() {
               Shopping Cart
             </div>
             <div className="w-48 active:text-[#0067D1] hover:underline underline-offset-2 font-[sans-serif] text-lg font-[400] text-nowrap drop-shadow-2xl">
-              <a href="/" rel="noopener noreferrer">
+              <a href="/checkout" rel="noopener noreferrer">
                 continue to checkout ≫
               </a>
             </div>
