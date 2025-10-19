@@ -60,7 +60,6 @@ export default function DumbellPage() {
             </button>
           </div>
         </div>
-        
       </div>
     </main>
   );

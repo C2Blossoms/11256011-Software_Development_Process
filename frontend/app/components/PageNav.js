@@ -6,11 +6,20 @@ import Link from "next/link";
 export default function PageNav() {
   const [isOpen, setIsOpen] = useState(false);
   function rockinButton() {
-    window.open("http://localhost:3000/Register", "_blank");
+    window.open("http://localhost:3000/register", "_blank");
   }
   const pathname = usePathname();
-    if (pathname === "/", pathname === '/payment', pathname === '/payment/pay_done') return null;
-  
+  const hiddenPaths = [
+    "/",
+    "/register",
+    "/login",
+    "/payment",
+    "/payment/pay_done",
+  ];
+
+  if (hiddenPaths.includes(pathname)) {
+    return null;
+  }
   return (
     <>
       <div className="bg-black h-110 z-3">
@@ -40,7 +49,7 @@ export default function PageNav() {
           </li>
           <li>
             <button
-              // onClick={rockinButton}
+              onClick={rockinButton}
               className="rock relative float-right right-[6%] w-30 h-10 font-[700] bg-[#606060] hover:bg-[#0067D1] active:bg-[#003770] rounded-xl focus:outline-2 focus:outline-[#0067D1] z-5"
             >
               Login
