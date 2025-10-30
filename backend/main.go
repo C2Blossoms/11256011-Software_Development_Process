@@ -1,18 +1,16 @@
 package main
 
 import (
-	//"encoding/json"
 	"log"
 	"net/http"
 	"os"
+	"runtime/debug"
 	"strings"
 
-	"runtime/debug"
-
 	"github.com/C2Blossoms/Project_SDP/backend/config"
-	"github.com/C2Blossoms/Project_SDP/backend/db"
-	"github.com/C2Blossoms/Project_SDP/backend/http/handlers"
-	"github.com/C2Blossoms/Project_SDP/backend/http/middleware"
+	dbpkg "github.com/C2Blossoms/Project_SDP/backend/db"
+	handlers "github.com/C2Blossoms/Project_SDP/backend/http/handlers"
+	authmw "github.com/C2Blossoms/Project_SDP/backend/http/middleware"
 	"github.com/C2Blossoms/Project_SDP/backend/models"
 	"github.com/C2Blossoms/Project_SDP/backend/oauth"
 	"github.com/C2Blossoms/Project_SDP/backend/security"
@@ -25,13 +23,18 @@ func main() {
 		log.Fatalf("Config error: %v", err)
 	}
 
-	gdb, err := db.Open(cfg, logger.Info)
+	gdb, err := dbpkg.Open(cfg, logger.Info)
 	if err != nil {
 		log.Fatalf("DB open error: %v", err)
 	}
 
 	if cfg.DBAutoMigrate {
-		if err := gdb.AutoMigrate(&models.User{}, &models.OAuthAccount{}, &models.RefreshToken{}, &models.Product{}); err != nil {
+		if err := gdb.AutoMigrate(
+			&models.User{}, &models.OAuthAccount{}, &models.RefreshToken{},
+			&models.Product{},
+			&models.Cart{}, &models.CartItem{},
+			&models.Order{}, &models.OrderItem{}, &models.Payment{},
+		); err != nil {
 			log.Fatalf("Automigrate error: %v", err)
 		}
 		log.Println("DB Migrate.")
@@ -41,29 +44,57 @@ func main() {
 	log.Printf("oauth providers loaded: %v", providers.Names())
 
 	jwtMgr := security.NewJWTManager(cfg)
+
+	// ----- deps ของ handler เดิม -----
 	authDeps := &handlers.AuthDeps{DB: gdb, JWT: jwtMgr}
 	oauthDeps := &handlers.OAuthDeps{DB: gdb, Providers: providers, JWT: jwtMgr}
-	authMw := &middleware.Auth{JWT: jwtMgr}
 	productDeps := &handlers.ProductDeps{DB: gdb}
+
+	// ----- middleware auth (ของโปรเจกต์คุณ) -----
+	authMw := &authmw.Auth{JWT: jwtMgr}
+
+	// ----- handlers ใหม่ (Cart/Checkout/Orders/Payments) -----
+	cartH := handlers.NewCartHandlers(gdb)
+	coH := handlers.NewCheckoutHandlers(gdb)
+	ordH := handlers.NewOrderHandlers(gdb)
+	payH := handlers.NewPaymentHandlers(gdb)
 
 	mux := http.NewServeMux()
 
+	// OAuth routes
 	mux.HandleFunc("GET /auth/oauth/{provider}/start", oauthDeps.OAuthStart)
 	mux.HandleFunc("GET /auth/oauth/{provider}/callback", oauthDeps.OAuthCallback)
+
+	// Auth routes
 	mux.HandleFunc("POST /auth/register", authDeps.Register)
 	mux.HandleFunc("POST /auth/login", authDeps.Login)
 	mux.HandleFunc("POST /auth/refresh", authDeps.Refresh)
 	mux.HandleFunc("POST /auth/logout", authDeps.Logout)
 
+	// Me (ตัวอย่างของโปรเจกต์เดิม)
 	mux.Handle("/me", authMw.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		uid, ok := middleware.UserIDFrom(r)
+		uid, ok := authmw.UserIDFrom(r) // <-- ใช้ alias ให้ตรงแพ็กเกจ
 		if !ok {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 		authDeps.Me(w, r, uid)
 	})))
-	// Product routes
+
+	// Cart routes (ต้องห่อ RequireAuth ผ่านอินสแตนซ์ authMw)
+	mux.Handle("GET /cart", authMw.RequireAuth(http.HandlerFunc(cartH.GetCart)))
+	mux.Handle("POST /cart/items", authMw.RequireAuth(http.HandlerFunc(cartH.AddItem)))
+	mux.Handle("DELETE /cart/items", authMw.RequireAuth(http.HandlerFunc(cartH.RemoveItem)))
+
+	// Checkout / Orders
+	mux.Handle("POST /checkout/place-order", authMw.RequireAuth(http.HandlerFunc(coH.PlaceOrder)))
+	mux.Handle("GET /orders/me", authMw.RequireAuth(http.HandlerFunc(ordH.ListMyOrders)))
+
+	// Payments (mock)
+	mux.Handle("POST /payments/intent", authMw.RequireAuth(http.HandlerFunc(payH.CreateIntent)))
+	mux.Handle("POST /payments/mock/mark-paid", http.HandlerFunc(payH.MarkPaidMock)) // dev only
+
+	// Product routes (ของเดิม)
 	mux.HandleFunc("/products", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -74,14 +105,12 @@ func main() {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
-
 	mux.HandleFunc("/products/", func(w http.ResponseWriter, r *http.Request) {
 		// /products/{id}/restore
 		if strings.HasSuffix(r.URL.Path, "/restore") && r.Method == http.MethodPost {
 			productDeps.RestoreProduct(w, r)
 			return
 		}
-
 		// /products/{id}
 		switch r.Method {
 		case http.MethodGet:
@@ -97,7 +126,6 @@ func main() {
 
 	// Healthcheck
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		//_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 		w.WriteHeader(200)
 		w.Write([]byte("ok"))
 	})
@@ -142,7 +170,7 @@ func recoverMW(next http.Handler) http.Handler {
 				http.Error(w, "internal server error", http.StatusInternalServerError)
 			}
 		}()
-		log.Printf("CALL %s %s", r.Method, r.URL.Path) // trace request เข้า
+		log.Printf("CALL %s %s", r.Method, r.URL.Path)
 		next.ServeHTTP(w, r)
 	})
 }

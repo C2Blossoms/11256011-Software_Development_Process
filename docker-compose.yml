@@ -1,12 +1,19 @@
+version: '3.9'
+
+x-healthcheck-mysql: &mysql_hc
+  test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+  interval: 5s
+  timeout: 3s
+  retries: 20
+  start_period: 5s
+
 services:
   # 1. Backend Service (Go)
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: go-backend
-    env_file:
-      - .env
+    env_file: .env
     environment:
       DB_HOST: ${MYSQL_HOST}
       DB_USER: ${MYSQL_USER}
@@ -21,57 +28,45 @@ services:
       REFRESH_TTL_DAY: ${REFRESH_TTL_DAY}
       DB_AUTOMIGRATE: ${DB_AUTOMIGRATE}
     ports:
-      - "${BACKEND_PORT}:${BACKEND_PORT}"
+      - "${BACKEND_PORT:-8000}:8000"
     depends_on:
       mysql:
         condition: service_healthy
-    networks:
-      - ecommerce-network
     restart: unless-stopped
+    init: true
 
   # 2. Frontend Service (NGINX)
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: web-frontend
     ports:
-      - "${FRONTEND_PORT}:3000"
+      - "${FRONTEND_PORT}:8080"
     depends_on:
       - backend
-    networks:
-      - ecommerce-network
     restart: unless-stopped
+    init: true
 
   # 3. Database Service (MySQL)
   mysql:
     image: mysql:8.0
-    container_name: mysql_db
-    env_file:
-      - .env
+    env_file: .env
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
-    # ports:
-      # - "3306:3306"
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-    networks:
-      - ecommerce-network
+    ports:
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+    healthcheck: *mysql_hc
     restart: unless-stopped
+    init: true
   
   phpmyadmin:
-    image: phpmyadmin:5
-    container_name: pma
-    env_file:
-      - .env
+    image: phpmyadmin/phpmyadmin:5.2
+    env_file: .env
     environment:
       PMA_HOST: mysql
       PMA_PORT: ${MYSQL_PORT}
@@ -81,13 +76,7 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
-    networks:
-      - ecommerce-network
     restart: unless-stopped
-
-networks:
-  ecommerce-network:
-    driver: bridge
 
 volumes:
   mysql_data:

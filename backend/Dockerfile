@@ -1,43 +1,24 @@
-# Stage 1: Build a Go application
-FROM golang:1.25-alpine AS backend-builder
+# syntax=docker/dockerfile:1.7-labs
+# ปล่อยให้ tag เดิมในไฟล์คุณคงอยู่ได้ ถ้าอยาก pin: ARG GO_VERSION=1.25.3
+FROM golang:1.25-alpine AS build
+WORKDIR /src
+RUN apk add --no-cache git ca-certificates tzdata
 
-# ตั้งค่า WORKDIR ภายใน container
-WORKDIR /app
-
-RUN apk add --no-cache git
-
-# Copy go.mod และ go.sum เพื่อ cache dependencies
+# ใช้ cache ของ BuildKit ให้เร็ว
 COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
 
-# ดาวน์โหลด dependencies ก่อนที่จะ copy source code เพื่อใช้ Docker layer caching
-RUN go mod download
-
-# Copy source code ทั้งหมด
 COPY . .
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /app/app .
 
-# สร้าง binary แบบ static 
-ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-
-RUN go build -o /out/ecom-api ./
-
-# Stage 2: Runtime
-FROM alpine:latest
-
-# ตั้งค่า WORKDIR ภายใน container
-WORKDIR /srv/ecom-api
-
-# ใส่ zoneifo เผื่อใช้ time zone
-RUN apk add --no-cache ca-certificates
-
-# เพิ่ม user ธรรมดาเพื่อความปลอดภัย
-RUN addgroup -S app && adduser -S app -G app
-USER app
-
-# Copy binary file จาก builder stage
-COPY --from=backend-builder /out/ecom-api ./ecom-api
-
-# Expose port ที่ application ใช้
+# runtime เล็กและปลอดภัย (อยากคง alpine ก็ได้)
+FROM alpine:3.20
+RUN apk add --no-cache ca-certificates tzdata
+WORKDIR /app
+COPY --from=build /app/app /app/app
+ENV PORT=8000
 EXPOSE 8000
-
-# Container รับค่าผ่าน ENV จาก compose
-ENTRYPOINT [ "/srv/ecom-api/ecom-api" ]
+USER 10001
+ENTRYPOINT ["/app/app"]
