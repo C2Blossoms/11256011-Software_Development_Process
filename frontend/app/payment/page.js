@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import "swiper/css";
-import "swiper/css/mousewheel";
-import "swiper/css/pagination";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function PaymentPage() {
+  const router = useRouter();
   const [slip, setSlip] = useState(null);
 
   const handleUpload = (e) => {
@@ -16,10 +15,10 @@ export default function PaymentPage() {
     }
   };
   function cancelButton() {
-    window.open("http://localhost:3000/checkout");
+    router.push("/checkout");
   }
   function confrimButton() {
-    window.open("http://localhost:3000/payment/pay_done");
+    router.push("/payment/pay_done");
   }
   return (
     <main className="flex justify-center bg-gradient-to-b from-black to-[#1F1F1F] min-h-screen bg-[1d1d20]">

@@ -1,13 +1,12 @@
 "use client";
 
-import "swiper/css";
-import "swiper/css/mousewheel";
-import "swiper/css/pagination";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function CheckoutPage() {
+  const router = useRouter();
   function toPayButton() {
-    window.open("http://localhost:3000/payment");
+    router.push("/payment");
   }
   return (
     <main className="flex justify-center bg-gradient-to-b from-black to-[#1F1F1F] min-h-screen bg-[1d1d20]">
