@@ -13,17 +13,17 @@ export default function CheckoutPage() {
       <div className="mt-20 w-[65%]">
         <Link
           className="flex justify-self-start font-[sans-serif] text-xl font-[600] hover:text-[#9c9c9c] active:text-[#0067D1]"
-          href="/"
+          href="/product"
         >
           ↩ back to shopping
         </Link>
-        <div className="flex justify-self-center pb-15 text-6xl font-[sans-serif] font-[700] text-nowrap drop-shadow-2xl">
+        <div className="flex justify-self-center pb-15 text-6xl font-[sans-serif] font-[700] text-nowrap drop-shadow-2xl cursor-default">
           Checkout
         </div>
 
         <div className="mb-11 relative gap-1 self-center justify-self-center top-0 w-[90%] bg-neutral-600/30 backdrop-blur-s m rounded-[40px] backdrop-opacity-10 border-2">
           <div className="pb-15 w-full flex justify-between">
-            <span className="flex mt-6 ml-7 text-lg font-[sans-serif] font-[600] text-nowrap drop-shadow-2xl">
+            <span className="flex mt-6 ml-7 text-lg font-[sans-serif] font-[600] text-nowrap drop-shadow-2xl cursor-default">
               item list
             </span>
             <button className="flex mr-10 hover:text-[#ec0000] active:text-[#a30000] cursor-pointer text-neutral-400 grid place-self-end w-15 font-[sans-serif] text-lg font-[500] text-nowrap drop-shadow-xl">
@@ -31,14 +31,14 @@ export default function CheckoutPage() {
             </button>
           </div>
           <div className="pb-10 w-full">
-            <span className="flex self-center justify-self-center">
+            <span className="flex self-center justify-self-center cursor-default">
               No item in the cart
             </span>
           </div>
         </div>
         <div className="flex justify-between font-[sans-serif] text-nowrap drop-shadow-2xl justify-self-center w-[90%]">
           <div className="justify-self-start flex flex-col ">
-            <span className="pb-4 text-xl font-[500]">Address</span>
+            <span className="pb-4 text-xl font-[500] cursor-default">Address</span>
             <form>
               <textarea
                 id="address"

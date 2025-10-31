@@ -12,11 +12,11 @@ export default function Footer() {
           <h2 className="text-xl font-bold text-white">Quick Links</h2>
           <ul className="text-sm grid grid-cols-2 gap-x-1 gap-y-2">
             <li><a href="/" className="hover:text-gray-200">Home</a></li>
-            <li><a href="/dumbell" className="hover:text-gray-200">Dumbbell</a></li>
+            <li><a href="/product" className="hover:text-gray-200">Dumbbell</a></li>
             <li><a href="/login" className="hover:text-gray-200">Login</a></li>
-            <li><a href="/whey_protein" className="hover:text-gray-200">Whey Protein</a></li>
+            <li><a href="/product" className="hover:text-gray-200">Whey Protein</a></li>
             <li><a href="/privacy_policy" className="hover:text-gray-200">Privacy Policy</a></li>
-            <li><a href="/treadmill" className="hover:text-gray-200">Treadmill</a></li>
+            <li><a href="/product" className="hover:text-gray-200">Treadmill</a></li>
           </ul>
         </div>
 
@@ -60,8 +60,8 @@ export default function Footer() {
         <p className="text-sm">
           Follow Us: 
           <a href="https://www.facebook.com/keiyrtiys.canthr.pheng/posts/pfbid02Woa748Pn4xTDoojPB5qa1sQQkFnjD63DaY4QiUTdJmWZBDfDw1b4vBaqokKqSVvYl" target="_blank" className="ml-2 text-gray-400 hover:text-white transition-colors">Facebook</a> | 
-          <a href="#" className="ml-2 text-gray-400 hover:text-white transition-colors">Instagram</a> | 
-          <a href="#" className="ml-2 text-gray-400 hover:text-white transition-colors">YouTube</a>
+          <a href="https://www.instagram.com/therealjoeishungry/reels/" className="ml-2 text-gray-400 hover:text-white transition-colors">Instagram</a> | 
+          <a href="https://www.youtube.com/@Khanomkheng" className="ml-2 text-gray-400 hover:text-white transition-colors">YouTube</a>
         </p>
       </div>
     </footer>

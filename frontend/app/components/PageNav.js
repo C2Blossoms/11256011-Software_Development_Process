@@ -88,6 +88,7 @@ export default function PageNav() {
           </li>
         )}
 
+
         {/* ✅ ถ้าล็อกอินแล้วให้แสดง Profile + Dropdown */}
         {loggedIn && (
           <li className="relative " ref={menuRef}>
