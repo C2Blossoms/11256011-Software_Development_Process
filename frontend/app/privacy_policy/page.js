@@ -11,7 +11,7 @@ export default function PrivacyPolicyPage() {
     <main className="container mx-auto max-w-12xl px-4 py-10">
       <article className="rounded-2xl border bg-white p-6 shadow-sm md:p-8 dark:border-slate-800 dark:bg-slate-900">
         <header>
-          <h1 className="text-2xl font-bold tracking-tight md:text-4xl">
+          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
             นโยบายความเป็นส่วนตัว (Privacy Policy)
           </h1>
           <p className="mt-3 text-slate-600 dark:text-slate-300 leading-relaxed">
@@ -26,7 +26,7 @@ export default function PrivacyPolicyPage() {
 
         {/* 1 */}
         <section id="scope" className="scroll-mt-24">
-          <h2 className="mt-10 text-xl font-semibold tracking-tight md:text-2xl">
+          <h2 className="mt-10 text-xxl font-semibold tracking-tight md:text-2xl">
             1. ขอบเขตของนโยบาย
           </h2>
           <p className="mt-3 leading-relaxed text-slate-700 dark:text-slate-300">
