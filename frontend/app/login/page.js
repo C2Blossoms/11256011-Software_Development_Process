@@ -11,7 +11,7 @@ export default function LoginPage() {
       {/* Logo */}
       <div className="mb-6">
         <Link href="/" className="logo">
-          <img className="w-200" src="/Vector.png" alt="Logo" />
+          <img className="mt-15 w-70" src="/Vector.png" alt="Logo" />
         </Link>
       </div>
 
@@ -55,8 +55,11 @@ export default function LoginPage() {
 
         {/* Button */}
         <button
-          //onClick={confrimButton}
-          className="mb-8 flex justify-self-center justify-center items-center w-50 h-13 bg-[#0067D1] rounded-xl text-xl font-[600] cursor-pointer hover:bg-[#0040a1] active:border-3 border-[#0079e3]"
+          onClick={() => {
+            localStorage.setItem("loggedIn", "true");
+            window.location.href = "/dumbell";
+          }}
+          className="mb-8 flex justify-self-center justify-center items-center w-50 h-13 bg-[#0067D1] rounded-xl text-xl font-[600] hover:bg-blue-800 active:bg-blue-900 hover:cursor-pointer transition"
         >
           login ≫
         </button>
