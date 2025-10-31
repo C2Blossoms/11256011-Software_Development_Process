@@ -223,7 +223,7 @@ export default function RegisterPage() {
             type="checkbox"
             checked={agreed}
             onChange={(e) => setAgreed(e.target.checked)}
-            className="mt-1 h-4 w-4 rounded border-neutral-300 bg-white text-[#0067D1] focus:ring-[#0067D1]"
+            className="mt-1 h-4 w-4 rounded border-neutral-300 bg-white text-[#0067D1] focus:ring-[#0067D1] hover:cursor-pointer"
           />
           <label htmlFor="agreePolicy" className="leading-tight">
             I have read and accept{" "}
@@ -244,7 +244,7 @@ export default function RegisterPage() {
           disabled={!agreed}
           aria-disabled={!agreed}
           className={`mb-8 flex mx-auto justify-center items-center w-50 h-13 rounded-xl text-xl font-[600] cursor-pointer transition-colors
-            ${agreed ? "bg-[#0067D1] hover:bg-[#0040a1] active:border-3 border-[#0079e3] text-white" : "bg-neutral-700 text-neutral-400 opacity-60 cursor-not-allowed"}`}
+            ${agreed ? "bg-[#0067D1] hover:bg-[#0040a1] active:border-3 border-[#0079e3] text-white" : "bg-neutral-700 text-neutral-400 opacity-60 hover:cursor-not-allowed hover:select-none"}`}
         >
           continue ≫
         </button>
