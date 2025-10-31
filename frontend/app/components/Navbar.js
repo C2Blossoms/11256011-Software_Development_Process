@@ -21,17 +21,17 @@ export default function Navbar() {
           </div>
           <ul className="nav-list relative top-18 justify-center flex items-center gap-[15%] font-[sans-serif] text-3xl font-[700] text-nowrap drop-shadow-2xl z-4">
             <li className="nav-item active:text-[#0067D1] hover:underline underline-offset-2 text-shadow-lg/30 drop-shadow-2xl">
-              <a href="/dumbell" rel="noopener noreferrer">
+              <a href="/product" rel="noopener noreferrer">
                 DUMBBELLS
               </a>
             </li>
             <li className="nav-item active:text-[#0067D1] hover:underline underline-offset-2 text-shadow-lg/30 drop-shadow-2xl">
-              <a href="/treadmill" rel="noopener noreferrer">
+              <a href="/product" rel="noopener noreferrer">
                 TREADMILLS
               </a>
             </li>
             <li className="nav-item active:text-[#0067D1] hover:underline underline-offset-2 text-shadow-lg/30 drop-shadow-2xl ">
-              <a href="/whey_protein" rel="noopener noreferrer">
+              <a href="/product" rel="noopener noreferrer">
                 WHEY PROTEIN
               </a>
             </li>

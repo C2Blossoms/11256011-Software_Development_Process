@@ -12,11 +12,11 @@ export default function Footer() {
           <h2 className="text-xl font-bold text-white">Quick Links</h2>
           <ul className="text-sm grid grid-cols-2 gap-x-1 gap-y-2">
             <li><a href="/" className="hover:text-gray-200">Home</a></li>
-            <li><a href="/dumbell" className="hover:text-gray-200">Dumbbell</a></li>
+            <li><a href="/product" className="hover:text-gray-200">Dumbbell</a></li>
             <li><a href="/login" className="hover:text-gray-200">Login</a></li>
-            <li><a href="/whey_protein" className="hover:text-gray-200">Whey Protein</a></li>
+            <li><a href="/product" className="hover:text-gray-200">Whey Protein</a></li>
             <li><a href="/privacy_policy" className="hover:text-gray-200">Privacy Policy</a></li>
-            <li><a href="/treadmill" className="hover:text-gray-200">Treadmill</a></li>
+            <li><a href="/product" className="hover:text-gray-200">Treadmill</a></li>
           </ul>
         </div>
 

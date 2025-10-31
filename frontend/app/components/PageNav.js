@@ -30,17 +30,17 @@ export default function PageNav() {
             </a>
           </li>
           <li className="nav-item active:text-[#0067D1] hover:underline underline-offset-2 text-shadow-lg/30 drop-shadow-2xl">
-            <a href="/dumbell" rel="noopener noreferrer">
+            <a href="/product" rel="noopener noreferrer">
               DUMBBELLS
             </a>
           </li>
           <li className="nav-item active:text-[#0067D1] hover:underline underline-offset-2 text-shadow-lg/30 drop-shadow-2xl">
-            <a href="/treadmill" rel="noopener noreferrer">
+            <a href="/product" rel="noopener noreferrer">
               TREADMILLS
             </a>
           </li>
           <li className="nav-item active:text-[#0067D1] hover:underline underline-offset-2 text-shadow-lg/30 drop-shadow-2xl ">
-            <a href="/whey_protein" rel="noopener noreferrer">
+            <a href="/product" rel="noopener noreferrer">
               WHEY PROTEIN
             </a>
           </li>
@@ -57,7 +57,7 @@ export default function PageNav() {
           </li>
         </ul>
 
-        <div className="relative justify-center flex items-center top-20 z-10">
+        <div className="relative justify-center flex items-center top-20 z-10 select-none">
           <Link href="/" className="logo">
             <img className="w-300" src="/Vector.png" />
           </Link>

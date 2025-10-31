@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "FitNest | Dumbell",
+  title: "FitNest | Product",
   description: "Build up your Fit",
 };
 export default function Layout({ children }) {
-  return <CategoryLayout title="Dumbell Section">{children}</CategoryLayout>;
+  return <CategoryLayout title="Product Section">{children}</CategoryLayout>;
 }
