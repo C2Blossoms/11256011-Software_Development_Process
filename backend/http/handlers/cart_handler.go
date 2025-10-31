@@ -1,13 +1,18 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"net/http"
 	"strings"
+	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
+	authmw "github.com/C2Blossoms/Project_SDP/backend/http/middleware"
 	"github.com/C2Blossoms/Project_SDP/backend/models"
 )
 
@@ -17,15 +22,17 @@ type CartHandlers struct {
 
 func NewCartHandlers(db *gorm.DB) *CartHandlers { return &CartHandlers{DB: db} }
 
-// GET /cart  (ต้อง auth)
+// GET /cart (ต้อง auth)
 func (h *CartHandlers) GetCart(w http.ResponseWriter, r *http.Request) {
-	uid, err := userIDFromCtx(r)
-	if err != nil {
+	uid, ok := authmw.UserIDFrom(r)
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
+
+	// หา/สร้าง cart ของ user
 	var cart models.Cart
-	if err := h.DB.Where("user_id = ?", uid).Preload("Items").First(&cart).Error; err != nil {
+	if err := h.DB.Where("user_id = ?", uid).First(&cart).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			cart = models.Cart{UserID: uid}
 			if err := h.DB.Create(&cart).Error; err != nil {
@@ -37,6 +44,18 @@ func (h *CartHandlers) GetCart(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+
+	// โหลด items แบบ query ตรง ๆ (ไม่ใช้ Preload)
+	var items []models.CartItem
+	if err := h.DB.
+		Where("cart_id = ?", cart.ID).
+		Order("id").
+		Find(&items).Error; err != nil {
+		http.Error(w, "db error (load items)", http.StatusInternalServerError)
+		return
+	}
+	cart.Items = items
+
 	writeJSON(w, http.StatusOK, cart)
 }
 
@@ -47,49 +66,48 @@ type addItemReq struct {
 
 // POST /cart/items {product_id, qty}
 func (h *CartHandlers) AddItem(w http.ResponseWriter, r *http.Request) {
-	uid, err := userIDFromCtx(r)
-	if err != nil {
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+
+	uid, ok := authmw.UserIDFrom(r)
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	var in addItemReq
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&in); err != nil || in.ProductID == 0 || in.Qty <= 0 {
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil || in.ProductID == 0 || in.Qty <= 0 {
 		http.Error(w, "invalid body", http.StatusBadRequest)
 		return
 	}
 
 	// ensure cart
 	var cart models.Cart
-	if err := h.DB.Where("user_id = ?", uid).First(&cart).Error; err != nil {
+	if err := h.DB.WithContext(ctx).Where("user_id = ?", uid).First(&cart).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			cart = models.Cart{UserID: uid}
-			if err := h.DB.Create(&cart).Error; err != nil {
-				http.Error(w, "db error (create cart)", http.StatusInternalServerError)
+			if err := h.DB.WithContext(ctx).Create(&cart).Error; err != nil {
+				http.Error(w, "db error (create cart): "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 		} else {
-			http.Error(w, "db error (find cart)", http.StatusInternalServerError)
+			http.Error(w, "db error (find cart): "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
 
-	// ดึง product + แปลงราคาเป็น cents จาก DECIMAL price
-	type productMin struct {
-		ID         uint
-		Stock      int
-		Status     string
-		PriceCents int64
-		Currency   string
+	// read product (เลี่ยงฟังก์ชันหนักใน SQL)
+	var p struct {
+		ID     uint
+		Stock  int
+		Status string
+		Price  float64
 	}
-	var p productMin
-	if err := h.DB.Model(&models.Product{}).
-		Select("id, stock, status, ROUND(price*100) AS price_cents, 'THB' AS currency").
+	if err := h.DB.WithContext(ctx).
+		Model(&models.Product{}).
+		Select("id, stock, status, price").
 		Where("id = ? AND deleted_at IS NULL", in.ProductID).
 		First(&p).Error; err != nil {
-
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			http.Error(w, "product not found", http.StatusNotFound)
 			return
@@ -97,7 +115,6 @@ func (h *CartHandlers) AddItem(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "db error (find product): "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	if !strings.EqualFold(p.Status, "active") {
 		http.Error(w, "product inactive", http.StatusBadRequest)
 		return
@@ -107,39 +124,46 @@ func (h *CartHandlers) AddItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// upsert item
-	var item models.CartItem
-	err = h.DB.Where("cart_id = ? AND product_id = ?", cart.ID, in.ProductID).First(&item).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		item = models.CartItem{
-			CartID:    cart.ID,
-			ProductID: in.ProductID,
-			Qty:       in.Qty,
-			UnitPrice: p.PriceCents, // snapshot เป็นหน่วย cents
-			Currency:  p.Currency,   // 'THB'
-		}
-		if err := h.DB.Create(&item).Error; err != nil {
-			http.Error(w, "db error (create item)", http.StatusInternalServerError)
-			return
-		}
-	} else if err == nil {
-		item.Qty += in.Qty
-		if err := h.DB.Save(&item).Error; err != nil {
-			http.Error(w, "db error (update item)", http.StatusInternalServerError)
-			return
-		}
-	} else {
-		http.Error(w, "db error (find item)", http.StatusInternalServerError)
+	priceCents := int64(math.Round(p.Price * 100))
+	currency := "THB"
+
+	// ===== Upsert โดยไม่ SELECT ก่อน + ข้าม Hooks =====
+	item := models.CartItem{
+		CartID:    cart.ID,
+		ProductID: in.ProductID,
+		Qty:       in.Qty,
+		UnitPrice: priceCents, // snapshot หน่วย cents
+		Currency:  currency,   // e.g. 'THB'
+	}
+
+	err := h.DB.
+		WithContext(ctx).
+		Session(&gorm.Session{SkipHooks: true}).
+		Clauses(clause.OnConflict{
+			Columns: []clause.Column{{Name: "cart_id"}, {Name: "product_id"}},
+			DoUpdates: clause.Assignments(map[string]any{
+				"qty":        gorm.Expr("LEAST(COALESCE(qty,0) + ?, 9999)", in.Qty),
+				"updated_at": gorm.Expr("NOW()"),
+				// >>> ปลุกแถวที่เคยถูก soft delete
+				"deleted_at": gorm.Expr("NULL"),
+			}),
+		}).
+		Create(&item).Error
+
+	if err != nil {
+		http.Error(w, "db error (upsert item): "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, item)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	_ = json.NewEncoder(w).Encode(item)
 }
 
 // DELETE /cart/items?id={cart_item_id}
 func (h *CartHandlers) RemoveItem(w http.ResponseWriter, r *http.Request) {
-	uid, err := userIDFromCtx(r)
-	if err != nil {
+	uid, ok := authmw.UserIDFrom(r)
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -151,8 +175,7 @@ func (h *CartHandlers) RemoveItem(w http.ResponseWriter, r *http.Request) {
 
 	// ensure item belongs to user's cart
 	var item models.CartItem
-	if err := h.DB.Preload("Cart").
-		Where("id = ?", id).First(&item).Error; err != nil {
+	if err := h.DB.Where("id = ?", id).First(&item).Error; err != nil {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}

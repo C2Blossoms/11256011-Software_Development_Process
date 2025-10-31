@@ -6,6 +6,7 @@ import (
 	"os"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/C2Blossoms/Project_SDP/backend/config"
 	dbpkg "github.com/C2Blossoms/Project_SDP/backend/db"
@@ -50,7 +51,7 @@ func main() {
 	oauthDeps := &handlers.OAuthDeps{DB: gdb, Providers: providers, JWT: jwtMgr}
 	productDeps := &handlers.ProductDeps{DB: gdb}
 
-	// ----- middleware auth (ของโปรเจกต์คุณ) -----
+	// ----- middleware auth -----
 	authMw := &authmw.Auth{JWT: jwtMgr}
 
 	// ----- handlers ใหม่ (Cart/Checkout/Orders/Payments) -----
@@ -60,6 +61,14 @@ func main() {
 	payH := handlers.NewPaymentHandlers(gdb)
 
 	mux := http.NewServeMux()
+
+	// Static /uploads (แทน r.Static ของ gin)
+	dir := os.Getenv("UPLOAD_DIR")
+	if dir == "" {
+		dir = "./uploads"
+	}
+	fs := http.FileServer(http.Dir(dir))
+	mux.Handle("/uploads/", http.StripPrefix("/uploads/", fs))
 
 	// OAuth routes
 	mux.HandleFunc("GET /auth/oauth/{provider}/start", oauthDeps.OAuthStart)
@@ -71,9 +80,9 @@ func main() {
 	mux.HandleFunc("POST /auth/refresh", authDeps.Refresh)
 	mux.HandleFunc("POST /auth/logout", authDeps.Logout)
 
-	// Me (ตัวอย่างของโปรเจกต์เดิม)
+	// Me
 	mux.Handle("/me", authMw.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		uid, ok := authmw.UserIDFrom(r) // <-- ใช้ alias ให้ตรงแพ็กเกจ
+		uid, ok := authmw.UserIDFrom(r)
 		if !ok {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
@@ -81,7 +90,7 @@ func main() {
 		authDeps.Me(w, r, uid)
 	})))
 
-	// Cart routes (ต้องห่อ RequireAuth ผ่านอินสแตนซ์ authMw)
+	// Cart routes
 	mux.Handle("GET /cart", authMw.RequireAuth(http.HandlerFunc(cartH.GetCart)))
 	mux.Handle("POST /cart/items", authMw.RequireAuth(http.HandlerFunc(cartH.AddItem)))
 	mux.Handle("DELETE /cart/items", authMw.RequireAuth(http.HandlerFunc(cartH.RemoveItem)))
@@ -94,7 +103,7 @@ func main() {
 	mux.Handle("POST /payments/intent", authMw.RequireAuth(http.HandlerFunc(payH.CreateIntent)))
 	mux.Handle("POST /payments/mock/mark-paid", http.HandlerFunc(payH.MarkPaidMock)) // dev only
 
-	// Product routes (ของเดิม)
+	// Products
 	mux.HandleFunc("/products", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -106,19 +115,17 @@ func main() {
 		}
 	})
 	mux.HandleFunc("/products/", func(w http.ResponseWriter, r *http.Request) {
-		// /products/{id}/restore
 		if strings.HasSuffix(r.URL.Path, "/restore") && r.Method == http.MethodPost {
 			productDeps.RestoreProduct(w, r)
 			return
 		}
-		// /products/{id}
 		switch r.Method {
 		case http.MethodGet:
 			productDeps.GetProduct(w, r)
 		case http.MethodPatch, http.MethodPut:
 			productDeps.UpdateProduct(w, r)
 		case http.MethodDelete:
-			productDeps.DeleteProduct(w, r) // soft delete by default
+			productDeps.DeleteProduct(w, r)
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
@@ -126,15 +133,24 @@ func main() {
 
 	// Healthcheck
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-		w.Write([]byte("ok"))
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
 	})
 
 	handler := recoverMW(cors(mux))
 
 	addr := ":" + defaultIfEmpty(os.Getenv("PORT"), "8000")
+	srv := &http.Server{
+		Addr:              addr,
+		Handler:           handler,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+
 	log.Println("Listening on", addr)
-	if err := http.ListenAndServe(addr, handler); err != nil {
+	if err := srv.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -144,7 +160,7 @@ func cors(next http.Handler) http.Handler {
 		origin := r.Header.Get("Origin")
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 		w.Header().Set("Vary", "Origin")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
