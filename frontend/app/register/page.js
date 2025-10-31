@@ -228,13 +228,13 @@ export default function RegisterPage() {
           <label htmlFor="agreePolicy" className="leading-tight">
             I have read and accept{" "}
             <Link href="/privacy_policy" className="text-[#0067D1] underline">
-             Privacy Policy
+              Privacy Policy
             </Link>{" "}
             {/* and{" "}
             <Link href="/terms" className="text-[#0067D1] underline">
               ข้อกำหนดการให้บริการ
             </Link> */}
-            . (It is necessary to tick before proceeding.)
+            . (It is necessary to check before proceeding.)
           </label>
         </div>
 
@@ -244,7 +244,11 @@ export default function RegisterPage() {
           disabled={!agreed}
           aria-disabled={!agreed}
           className={`mb-8 flex mx-auto justify-center items-center w-50 h-13 rounded-xl text-xl font-[600] cursor-pointer transition-colors
-            ${agreed ? "bg-[#0067D1] hover:bg-[#0040a1] active:border-3 border-[#0079e3] text-white" : "bg-neutral-700 text-neutral-400 opacity-60 hover:cursor-not-allowed hover:select-none"}`}
+            ${
+              agreed
+                ? "bg-[#0067D1] hover:bg-[#0040a1] active:border-3 border-[#0079e3] text-white"
+                : "bg-neutral-700 text-neutral-400 opacity-60 hover:cursor-not-allowed hover:select-none"
+            }`}
         >
           continue ≫
         </button>

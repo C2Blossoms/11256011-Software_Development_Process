@@ -11,15 +11,20 @@ export default function PageNav() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const hiddenPaths = ["/", "/register", "/login", "/payment", "/payment/pay_done", "/edit_acc"];
+  const hiddenPaths = [
+    "/",
+    "/register",
+    "/login",
+    "/payment",
+    "/payment/pay_done",
+    "/edit_acc",
+  ];
 
-  // ✅ Check login state
   useEffect(() => {
     const token = localStorage.getItem("loggedIn");
     setLoggedIn(token === "true");
   }, []);
 
-  // ✅ Close dropdown when click outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -51,32 +56,31 @@ export default function PageNav() {
     //     <li><Link href="/whey_protein">WHEY PROTEIN</Link></li>
 
     //     <li className="text-3xl font-light">|</li>
-        <div className="bg-black h-110 z-3">
-            <ul className="nav-list relative top-10 justify-center flex items-center gap-[5%] font-[sans-serif] text-xl font-[700] text-nowrap drop-shadow-2xl z-4">
-              <li className="nav-item active:text-[#0067D1] hover:underline underline-offset-2 text-shadow-lg/30 drop-shadow-2xl">
-                <a href="/" rel="noopener noreferrer">
-                  HOME
-                </a>
-              </li>
-              <li className="nav-item active:text-[#0067D1] hover:underline underline-offset-2 text-shadow-lg/30 drop-shadow-2xl">
-                <a href="/dumbell" rel="noopener noreferrer">
-                  DUMBBELLS
-                </a>
-              </li>
-              <li className="nav-item active:text-[#0067D1] hover:underline underline-offset-2 text-shadow-lg/30 drop-shadow-2xl">
-                <a href="/treadmill" rel="noopener noreferrer">
-                  TREADMILLS
-                </a>
-              </li>
-              <li className="nav-item active:text-[#0067D1] hover:underline underline-offset-2 text-shadow-lg/30 drop-shadow-2xl ">
-                <a href="/whey_protein" rel="noopener noreferrer">
-                  WHEY PROTEIN
-                </a>
-              </li>
-              <li className="nav-item relative -top-[0.8] text-3xl font-[100] underline-offset-2 text-shadow-lg/30 drop-shadow-2xl cursor-default">
-                |
-              </li>
-        {/* ✅ ถ้ายังไม่ login ให้แสดงปุ่ม login */}
+    <div className="bg-black h-110 z-3">
+      <ul className="nav-list relative top-10 justify-center flex items-center gap-[5%] font-[sans-serif] text-xl font-[700] text-nowrap drop-shadow-2xl z-4">
+        <li className="nav-item active:text-[#0067D1] hover:underline underline-offset-2 text-shadow-lg/30 drop-shadow-2xl">
+          <a href="/" rel="noopener noreferrer">
+            HOME
+          </a>
+        </li>
+        <li className="nav-item active:text-[#0067D1] hover:underline underline-offset-2 text-shadow-lg/30 drop-shadow-2xl">
+          <a href="/product" rel="noopener noreferrer">
+            DUMBBELLS
+          </a>
+        </li>
+        <li className="nav-item active:text-[#0067D1] hover:underline underline-offset-2 text-shadow-lg/30 drop-shadow-2xl">
+          <a href="/product" rel="noopener noreferrer">
+            TREADMILLS
+          </a>
+        </li>
+        <li className="nav-item active:text-[#0067D1] hover:underline underline-offset-2 text-shadow-lg/30 drop-shadow-2xl ">
+          <a href="/product" rel="noopener noreferrer">
+            WHEY PROTEIN
+          </a>
+        </li>
+        <li className="nav-item relative -top-[0.8] text-3xl font-[100] underline-offset-2 text-shadow-lg/30 drop-shadow-2xl cursor-default">
+          |
+        </li>
         {!loggedIn && (
           <li>
             <button
@@ -88,8 +92,6 @@ export default function PageNav() {
           </li>
         )}
 
-
-        {/* ✅ ถ้าล็อกอินแล้วให้แสดง Profile + Dropdown */}
         {loggedIn && (
           <li className="relative " ref={menuRef}>
             <button
@@ -129,10 +131,10 @@ export default function PageNav() {
 } */}
 
       <div className="relative justify-self-center justify-center flex w-140 items-center top-20 z-10">
-          <Link href="/" className="logo ">
-            <img className="w-130 " src="/Vector.png" />
-          </Link>
-        </div>
+        <Link href="/" className="logo ">
+          <img className="w-130 " src="/Vector.png" />
+        </Link>
       </div>
+    </div>
   );
 }

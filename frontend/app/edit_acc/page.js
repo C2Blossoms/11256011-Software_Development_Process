@@ -13,7 +13,7 @@ export default function editPage() {
         <ul className="flex justify-center gap-6 text-md font-bold">
           <li>
             <a
-              href="/dumbell"
+              href="/"
               rel="noopener noreferrer"
               className="text-[#0067D1] hover:underline underline-offset-2"
             >
@@ -51,7 +51,7 @@ export default function editPage() {
             type="password"
             className="w-full h-12 rounded-[20px] px-4 bg-white text-black placeholder:text-gray-800 placeholder:font-semibold"
             placeholder="Enter here"
-            />
+          />
         </div>
 
         {/* Confirm New Password */}
@@ -76,7 +76,7 @@ export default function editPage() {
           rel="noopener noreferrer"
           className="font-bold flex justify-center text-[#0067D1] hover:underline underline-offset-2"
         >
-        Cancel Changes
+          Cancel Changes
         </a>
 
         {/* === ADDED SECTION END === */}

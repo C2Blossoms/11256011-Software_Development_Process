@@ -21,7 +21,7 @@ export default function LoginPage() {
         <ul className="flex justify-center gap-6 text-md font-bold">
           <li>
             <a
-              href="/dumbell"
+              href="/"
               rel="noopener noreferrer"
               className="text-[#0067D1] hover:underline underline-offset-2"
             >
@@ -57,7 +57,7 @@ export default function LoginPage() {
         <button
           onClick={() => {
             localStorage.setItem("loggedIn", "true");
-            window.location.href = "/dumbell";
+            window.location.href = "/product";
           }}
           className="mb-8 flex justify-self-center justify-center items-center w-50 h-13 bg-[#0067D1] rounded-xl text-xl font-[600] hover:bg-blue-800 active:bg-blue-900 hover:cursor-pointer transition"
         >
@@ -113,8 +113,6 @@ export default function LoginPage() {
           </svg>
           <span>login with Google</span>
         </button>
-
-        {/* === ADDED SECTION END === */}
       </div>
     </main>
   );
