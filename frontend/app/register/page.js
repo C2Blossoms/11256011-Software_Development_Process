@@ -154,7 +154,7 @@ export default function RegisterPage() {
       {/* Logo */}
       <div className="mb-6">
         <Link href="/" className="logo">
-          <img className="w-250" src="/Vector.png" alt="Logo" />
+          <img className="mt-15 w-70" src="/Vector.png" alt="Logo" />
         </Link>
       </div>
 
@@ -164,7 +164,7 @@ export default function RegisterPage() {
         <ul className="flex justify-center gap-6 text-md font-bold">
           <li>
             <a
-              href="/dumbell"
+              href="/"
               rel="noopener noreferrer"
               className="text-[#0067D1] hover:underline underline-offset-2"
             >
