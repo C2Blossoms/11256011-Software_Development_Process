@@ -10,6 +10,8 @@ RUN npm run build
 FROM node:20-alpine AS frontend-runtime
 WORKDIR /app
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 
 # ติดตั้งเฉพาะ prod deps
@@ -21,4 +23,4 @@ COPY --from=frontend-build /app/.next ./.next
 COPY --from=frontend-build /app/public ./public
 
 EXPOSE 3000
-CMD ["npm", "run", "start"]
+CMD ["npm", "start"]

@@ -5,6 +5,15 @@ import "swiper/css/mousewheel";
 import "swiper/css/pagination";
 import Link from "next/link";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+const FRONTEND_ORIGIN = process.env.NEXT_PUBLIC_FRONTEND_ORIGIN ?? "http://localhost:3000";
+
+function handleGoogleLogin() {
+  const redirectTo = `${FRONTEND_ORIGIN}/oauth/finish`;
+  window.location.href =
+    `${API_BASE}/auth/oauth/google/start?redirect_to=` + encodeURIComponent(redirectTo);
+}
+
 export default function LoginPage() {
   return (
     <main className="bg-gradient-to-b from-black to-[#1F1F1F] min-h-screen flex flex-col items-center justify-center px-4">
@@ -85,7 +94,11 @@ export default function LoginPage() {
         </div>
 
         {/* Google Login Button */}
-        <button className="mx-auto flex w-[80%] items-center justify-center gap-3 rounded-[50px] bg-white py-3 font-semibold text-black transition hover:bg-gray-200">
+        <button
+          type="button"
+          onClick={handleGoogleLogin}
+          className="mx-auto flex w-[80%] items-center justify-center gap-3 rounded-[50px] bg-white py-3 font-semibold text-black transition hover:bg-gray-200"
+        >
           {/* Google Logo SVG */}
           <svg
             xmlns="http://www.w3.org/2000/svg"

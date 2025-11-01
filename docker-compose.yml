@@ -28,7 +28,7 @@ services:
       REFRESH_TTL_DAY: ${REFRESH_TTL_DAY}
       DB_AUTOMIGRATE: ${DB_AUTOMIGRATE}
     ports:
-      - "${BACKEND_PORT:-8000}:8000"
+      - "8080:8080"
     depends_on:
       mysql:
         condition: service_healthy
@@ -40,8 +40,12 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
+      - NEXT_PUBLIC_FRONTEND_ORIGIN=http://localhost:3000
+    command: ["npm","start","--","-H","0.0.0.0","-p","3000"]
     ports:
-      - "${FRONTEND_PORT}:8080"
+      - "3000:3000"
     depends_on:
       - backend
     restart: unless-stopped
@@ -57,7 +61,7 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
     ports:
-      - "3307:3306"
+      - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck: *mysql_hc

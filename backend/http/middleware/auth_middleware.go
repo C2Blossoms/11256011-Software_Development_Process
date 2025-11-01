@@ -37,17 +37,30 @@ type Auth struct {
 
 func (a *Auth) RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ah := r.Header.Get("Authorization")
-		if !strings.HasPrefix(ah, "Bearer ") {
+		// 1) ลองอ่านจาก Authorization: Bearer ...
+		var token string
+		if ah := r.Header.Get("Authorization"); strings.HasPrefix(ah, "Bearer ") {
+			token = strings.TrimPrefix(ah, "Bearer ")
+		}
+
+		// 2) ถ้าไม่มี ให้ลองจากคุกกี้ access_token
+		if token == "" {
+			if c, err := r.Cookie("access_token"); err == nil {
+				token = c.Value
+			}
+		}
+
+		if token == "" {
 			http.Error(w, "Missing Token", http.StatusUnauthorized)
 			return
 		}
-		token := strings.TrimPrefix(ah, "Bearer ")
+
 		claims, err := a.JWT.ParseAccess(token)
 		if err != nil {
 			http.Error(w, "Invalid Token", http.StatusUnauthorized)
 			return
 		}
+
 		ctx := context.WithValue(r.Context(), ctxUserID, claims.UserID)
 		ctx = context.WithValue(ctx, ctxRole, claims.Role)
 		next.ServeHTTP(w, r.WithContext(ctx))
