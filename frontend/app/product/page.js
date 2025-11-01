@@ -218,9 +218,31 @@ export default function ProductPage() {
 =======
 =======
   const [products, setProducts] = useState([]);
+  const [cart, setCart] = useState({ items: [] });
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
+  const router = useRouter();
 
+ const fetchCart = async () => {
+    try {
+      const res = await fetch("http://localhost:8000/cart", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+      });
+      if (!res.ok) {
+        if (res.status === 401) {
+          router.push('/login');
+          return;
+        }
+        throw new Error(`Cart fetch failed: ${res.status}`);
+      }
+      const data = await res.json();
+      setCart(data);
+    } catch (error) {
+      console.error("Error fetching cart:", error);
+    }
+  };
   useEffect(() => {
     async function load() {
       setLoading(true);

@@ -92,7 +92,7 @@ func main() {
 	})))
 
 	// Cart routes
-	mux.Handle("GET /cart", authMw.RequireAuth(http.HandlerFunc(cartH.GetCart)))
+	mux.Handle("/cart", authMw.RequireAuth(http.HandlerFunc(cartH.GetCart)))
 	mux.Handle("POST /cart/items", authMw.RequireAuth(http.HandlerFunc(cartH.AddItem)))
 	mux.Handle("DELETE /cart/items", authMw.RequireAuth(http.HandlerFunc(cartH.RemoveItem)))
 
