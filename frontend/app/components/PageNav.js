@@ -20,6 +20,16 @@ export default function PageNav() {
     "/edit_acc",
   ];
 
+  //logout
+  const logout = () => {
+    localStorage.removeItem("loggedIn");
+    localStorage.removeItem("loggedInExpires");
+    localStorage.removeItem("authToken");
+    setLoggedIn(false);
+    setOpenMenu(false);
+    router.push("/");
+  };
+
   useEffect(() => {
     const token = localStorage.getItem("loggedIn");
     setLoggedIn(token === "true");
@@ -79,7 +89,7 @@ export default function PageNav() {
     // pass current page for redirect after login
     router.push(`/login?next=${encodeURIComponent(pathname || "/")}`);
   };
-
+  
   return (
     // <div className="bg-black h-110">
     //   <ul className="nav-list flex justify-center items-center gap-[5%] text-xl font-bold text-white pt-10">
