@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"os"
 
 	"github.com/C2Blossoms/Project_SDP/backend/models"
 	"github.com/C2Blossoms/Project_SDP/backend/oauth"
@@ -147,14 +149,22 @@ func (h *OAuthDeps) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 	// เก็บ refresh token
 	h.DB.Create(&models.RefreshToken{UserID: user.ID, JTI: jti, ExpiresAt: refreshExp})
 
-	_ = json.NewEncoder(w).Encode(map[string]any{
-		"access_token":  at,
-		"refresh_token": rt,
-		"token_type":    "Bearer",
-		"expires_in":    int(h.JWT.AccessTTL.Seconds()),
-		"user":          map[string]any{"id": user.ID, "email": user.Email, "name": user.Name, "role": user.Role},
-		"oauth":         map[string]string{"provider": provider, "provider_user_id": providerUserID},
-	})
+	// Redirect กลับไปที่ frontend callback page พร้อม tokens ใน query string
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = "http://localhost:8080"
+	}
+	callbackURL, _ := url.Parse(frontendURL + "/auth/oauth/callback")
+	q := callbackURL.Query()
+	q.Set("access_token", at)
+	q.Set("refresh_token", rt)
+	q.Set("token_type", "Bearer")
+	q.Set("user_id", fmt.Sprintf("%d", user.ID))
+	q.Set("user_email", user.Email)
+	q.Set("user_name", user.Name)
+	q.Set("user_role", user.Role)
+	callbackURL.RawQuery = q.Encode()
+	http.Redirect(w, r, callbackURL.String(), http.StatusFound)
 }
 
 // --- Provider-specific profile fetchers ---

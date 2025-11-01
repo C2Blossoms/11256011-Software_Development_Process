@@ -17,15 +17,15 @@ type Cart struct {
 }
 
 type CartItem struct {
-	ID        uint   `gorm:"primaryKey"`
+	ID        uint   `gorm:"primaryKey" json:"id"`
 	CartID    uint   `gorm:"not null;index;uniqueIndex:uq_cart_product,priority:1" json:"cart_id"`
 	ProductID uint   `gorm:"not null;index;uniqueIndex:uq_cart_product,priority:2" json:"product_id"`
 	Qty       int    `gorm:"not null;default:1" json:"qty"`
 	UnitPrice int64  `gorm:"not null;default:0" json:"unit_price"` // cents
 	Currency  string `gorm:"size:8;not null;default:THB" json:"currency"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt gorm.DeletedAt `gorm:"index"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 func (CartItem) TableName() string { return "cart_items" }

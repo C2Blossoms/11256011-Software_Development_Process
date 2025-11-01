@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 
 	authmw "github.com/C2Blossoms/Project_SDP/backend/http/middleware"
 	"github.com/C2Blossoms/Project_SDP/backend/models"
@@ -77,10 +76,12 @@ func (h *CartHandlers) AddItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var in addItemReq
-	if err := json.NewDecoder(r.Body).Decode(&in); err != nil || in.ProductID == 0 || in.Qty <= 0 {
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil || in.ProductID == 0 {
 		http.Error(w, "invalid body", http.StatusBadRequest)
 		return
 	}
+	// บังคับให้ qty = 1 เสมอ (ไม่สนใจค่าที่ส่งมา)
+	in.Qty = 1
 
 	// ensure cart (หาเฉพาะที่ยังไม่ถูกลบ)
 	var cart models.Cart
@@ -120,7 +121,8 @@ func (h *CartHandlers) AddItem(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "product inactive", http.StatusBadRequest)
 		return
 	}
-	if p.Stock < in.Qty {
+	// เช็ค stock สำหรับการเพิ่มทีละ 1
+	if p.Stock < 1 {
 		http.Error(w, "insufficient stock", http.StatusUnprocessableEntity)
 		return
 	}
@@ -128,31 +130,85 @@ func (h *CartHandlers) AddItem(w http.ResponseWriter, r *http.Request) {
 	priceCents := int64(math.Round(p.Price * 100))
 	currency := "THB"
 
-	// ===== Upsert โดยไม่ SELECT ก่อน + ข้าม Hooks =====
-	item := models.CartItem{
-		CartID:    cart.ID,
-		ProductID: in.ProductID,
-		Qty:       in.Qty,
-		UnitPrice: priceCents, // snapshot หน่วย cents
-		Currency:  currency,   // e.g. 'THB'
-	}
+	// ใช้ transaction เพื่อป้องกัน race condition
+	var item models.CartItem
+	txErr := h.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// หาว่ามี cart item อยู่แล้วหรือไม่ (หาเฉพาะที่ยังไม่ถูกลบ)
+		var existingItem models.CartItem
+		err := tx.
+			Where("cart_id = ? AND product_id = ? AND deleted_at IS NULL", cart.ID, in.ProductID).
+			First(&existingItem).Error
 
-	err := h.DB.
-		WithContext(ctx).
-		Session(&gorm.Session{SkipHooks: true}).
-		Clauses(clause.OnConflict{
-			Columns: []clause.Column{{Name: "cart_id"}, {Name: "product_id"}},
-			DoUpdates: clause.Assignments(map[string]any{
-				"qty":        gorm.Expr("LEAST(COALESCE(qty,0) + ?, 9999)", in.Qty),
-				"updated_at": gorm.Expr("NOW()"),
-				// >>> ปลุกแถวที่เคยถูก soft delete
-				"deleted_at": gorm.Expr("NULL"),
-			}),
-		}).
-		Create(&item).Error
+		if err == nil {
+			// มีอยู่แล้ว → เพิ่ม qty +1
+			if err := tx.
+				Model(&existingItem).
+				Updates(map[string]any{
+					"qty":        gorm.Expr("qty + 1"),
+					"updated_at": gorm.Expr("NOW()"),
+				}).Error; err != nil {
+				return err
+			}
+			// โหลดข้อมูลที่อัพเดทแล้ว
+			if err := tx.First(&item, existingItem.ID).Error; err != nil {
+				return err
+			}
+			return nil
+		} else if errors.Is(err, gorm.ErrRecordNotFound) {
+			// ตรวจสอบว่ามีรายการที่ถูก soft delete อยู่หรือไม่
+			// ถ้ามีให้ลบออกก่อน (hard delete) เพื่อหลีกเลี่ยง unique constraint violation
+			var softDeletedItem models.CartItem
+			if err2 := tx.Unscoped().
+				Where("cart_id = ? AND product_id = ? AND deleted_at IS NOT NULL", cart.ID, in.ProductID).
+				First(&softDeletedItem).Error; err2 == nil {
+				// พบรายการที่ถูก soft delete → hard delete เพื่อให้สามารถสร้างใหม่ได้
+				if err2 := tx.Unscoped().Delete(&softDeletedItem).Error; err2 != nil {
+					return err2
+				}
+			}
 
-	if err != nil {
-		http.Error(w, "db error (upsert item): "+err.Error(), http.StatusInternalServerError)
+			// สร้างใหม่ qty = 1
+			item = models.CartItem{
+				CartID:    cart.ID,
+				ProductID: in.ProductID,
+				Qty:       1, // เพิ่มทีละ 1 เสมอ
+				UnitPrice: priceCents,
+				Currency:  currency,
+			}
+			if err := tx.Create(&item).Error; err != nil {
+				// ถ้าเกิด duplicate key error แสดงว่ามี request อื่นเพิ่มไปแล้วระหว่างที่เรากำลังสร้าง
+				// ให้ลองหาใหม่แล้วเพิ่ม qty
+				if strings.Contains(err.Error(), "Duplicate entry") || strings.Contains(err.Error(), "uq_cart") {
+					var existingItem2 models.CartItem
+					if err2 := tx.
+						Where("cart_id = ? AND product_id = ? AND deleted_at IS NULL", cart.ID, in.ProductID).
+						First(&existingItem2).Error; err2 == nil {
+						// พบแล้ว → เพิ่ม qty +1
+						if err2 := tx.
+							Model(&existingItem2).
+							Updates(map[string]any{
+								"qty":        gorm.Expr("qty + 1"),
+								"updated_at": gorm.Expr("NOW()"),
+							}).Error; err2 != nil {
+							return err2
+						}
+						// โหลดข้อมูลที่อัพเดทแล้ว
+						if err2 := tx.First(&item, existingItem2.ID).Error; err2 != nil {
+							return err2
+						}
+						return nil
+					}
+				}
+				return err
+			}
+			return nil
+		} else {
+			return err
+		}
+	})
+
+	if txErr != nil {
+		http.Error(w, "db error: "+txErr.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -193,10 +249,52 @@ func (h *CartHandlers) RemoveItem(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
-	// Soft delete item
-	if err := h.DB.Delete(&item).Error; err != nil {
+	
+	// ลบทีละ 1: ถ้า qty > 1 ให้ลด qty ลง 1, ถ้า qty = 1 ให้ลบทั้งรายการ
+	if item.Qty > 1 {
+		// ลดจำนวนลง 1
+		if err := h.DB.Model(&item).Update("qty", gorm.Expr("qty - 1")).Error; err != nil {
+			http.Error(w, "db error", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		// Soft delete item เมื่อ qty = 1
+		if err := h.DB.Delete(&item).Error; err != nil {
+			http.Error(w, "db error", http.StatusInternalServerError)
+			return
+		}
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// DELETE /cart - ลบรายการทั้งหมดในตะกร้า
+func (h *CartHandlers) ClearCart(w http.ResponseWriter, r *http.Request) {
+	uid, ok := authmw.UserIDFrom(r)
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// หา cart ของ user (หาเฉพาะที่ยังไม่ถูกลบ)
+	var cart models.Cart
+	if err := h.DB.Where("user_id = ? AND deleted_at IS NULL", uid).First(&cart).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// ไม่มี cart → ไม่มีอะไรให้ลบ
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
 		http.Error(w, "db error", http.StatusInternalServerError)
 		return
 	}
+
+	// ลบรายการทั้งหมดในตะกร้า (soft delete)
+	// ใช้ Model เพื่อให้แน่ใจว่าลบได้ถูกต้อง
+	result := h.DB.Where("cart_id = ? AND deleted_at IS NULL", cart.ID).Delete(&models.CartItem{})
+	if result.Error != nil {
+		http.Error(w, "db error: "+result.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// ส่ง response กลับ
 	w.WriteHeader(http.StatusNoContent)
 }

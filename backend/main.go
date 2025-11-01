@@ -80,6 +80,7 @@ func main() {
 	mux.HandleFunc("/auth/login", authDeps.Login)
 	mux.HandleFunc("/auth/refresh", authDeps.Refresh)
 	mux.HandleFunc("/auth/logout", authDeps.Logout)
+	mux.HandleFunc("/auth/create-admin", authDeps.CreateAdmin) // สำหรับสร้าง admin ง่ายๆ
 
 	// Me
 	mux.Handle("/me", authMw.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -92,7 +93,16 @@ func main() {
 	})))
 
 	// Cart routes
-	mux.Handle("/cart", authMw.RequireAuth(http.HandlerFunc(cartH.GetCart)))
+	mux.HandleFunc("/cart", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			authMw.RequireAuth(http.HandlerFunc(cartH.GetCart)).ServeHTTP(w, r)
+		case http.MethodDelete:
+			authMw.RequireAuth(http.HandlerFunc(cartH.ClearCart)).ServeHTTP(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
 	mux.Handle("POST /cart/items", authMw.RequireAuth(http.HandlerFunc(cartH.AddItem)))
 	mux.Handle("DELETE /cart/items", authMw.RequireAuth(http.HandlerFunc(cartH.RemoveItem)))
 

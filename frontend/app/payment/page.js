@@ -123,30 +123,56 @@ function PaymentContent() {
     );
   }
   return (
-    <main className="flex justify-center bg-gradient-to-b from-black to-[#1F1F1F] min-h-screen bg-[1d1d20]">
-      <div className="flex justify-center w-[100%]">
-        <ul className="font-[sans-serif] text-nowrap drop-shadow-2xl">
-          <li>
-            <button
-              onClick={cancelButton}
-              className="mt-30 mb-7 text-lg cursor-pointer hover:text-red-700 hover:underline text-white"
-            >
-              ✕ cancel
-            </button>
-            {order && (
-              <div className="mb-4 text-white text-center">
-                <div className="text-xl font-semibold mb-2">ยอดที่ต้องชำระ</div>
-                <div className="text-3xl text-yellow-400 font-bold">
-                  ฿{order.total.toFixed(2)}
-                </div>
+    <main className="flex justify-center bg-gradient-to-b from-black to-[#1F1F1F] min-h-screen bg-[1d1d20] pb-20">
+      <div className="w-full max-w-2xl px-6 mt-12">
+        <button
+          onClick={cancelButton}
+          className="mb-6 text-lg cursor-pointer hover:text-red-400 hover:underline text-white transition-colors inline-flex items-center gap-2"
+        >
+          ✕ ยกเลิก
+        </button>
+
+        <div className="bg-neutral-600/30 backdrop-blur-sm rounded-3xl backdrop-opacity-10 border-2 border-gray-700/50 shadow-xl p-8">
+          {order && (
+            <div className="mb-6 text-center pb-6 border-b border-gray-700/50">
+              <div className="text-sm text-gray-400 mb-2">ยอดที่ต้องชำระ</div>
+              <div className="text-4xl text-yellow-400 font-bold">
+                ฿{order.total.toFixed(2)}
               </div>
-            )}
-            <img className=" mb-8 w-100" src="myqr.png" alt="QR Code" />
+            </div>
+          )}
+
+          <div className="mb-8">
+            <div className="text-center mb-4">
+              <h2 className="text-2xl font-bold text-white mb-2">ชำระเงินผ่านพร้อมเพย์</h2>
+              <p className="text-gray-400 text-sm">สแกน QR Code เพื่อโอนเงิน</p>
+            </div>
+            
+            <div className="flex justify-center">
+              <img 
+                className="w-full max-w-sm" 
+                src="/myqr.png" 
+                alt="พร้อมเพย์ QR Code"
+                style={{ imageRendering: 'crisp-edges' }}
+              />
+            </div>
+
+            <div className="mt-4 text-center text-gray-400 text-xs">
+              <p>ชื่อ: นาย พงศ์พณิช อินทร์เทพ</p>
+              <p>บัญชี: xxx-x-x0953-x</p>
+              <p>รับเงินได้จากทุกธนาคาร</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
             <label
               htmlFor="upload-slip"
-              className="mb-5 cursor-pointer flex justify-self-center justify-center flex-col items-center justify-center w-70 h-13 bg-[#0067D1] rounded-xl text-lg font-[600] text-white hover:bg-[#0040a1] active:border-3 border-[#0079e3]"
+              className="cursor-pointer flex justify-center items-center gap-2 w-full h-14 bg-gradient-to-r from-[#0067D1] to-[#0040a1] rounded-xl text-lg font-[600] text-white hover:from-[#0040a1] hover:to-[#0067D1] transition-all shadow-lg"
             >
-              Upload Payment Slip
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              อัปโหลดสลิปการโอนเงิน
             </label>
             <input
               id="upload-slip"
@@ -157,12 +183,12 @@ function PaymentContent() {
             />
 
             {slip?.preview && (
-              <div className="flex flex-col items-center gap-2 mb-10">
-                <p className="text-white text-lg font-medium">Preview:</p>
+              <div className="flex flex-col items-center gap-3 p-4 bg-gray-800/50 rounded-xl border border-gray-700/50">
+                <p className="text-white text-sm font-medium">ตัวอย่างสลิปที่อัปโหลด:</p>
                 <img
                   src={slip.preview}
                   alt="Uploaded slip"
-                  className="rounded-lg max-h-80 border border-gray-500 shadow-md"
+                  className="rounded-lg max-h-64 border-2 border-gray-500 shadow-md"
                 />
               </div>
             )}
@@ -170,12 +196,24 @@ function PaymentContent() {
             <button
               onClick={confrimButton}
               disabled={!slip || processing}
-              className="mb-30 flex justify-self-center justify-center items-center w-70 h-13 bg-[#0067D1] rounded-xl text-xl font-[600] cursor-pointer hover:bg-[#0040a1] active:border-3 border-[#0079e3] disabled:bg-gray-600 disabled:cursor-not-allowed text-white"
+              className="w-full h-14 bg-gradient-to-r from-green-600 to-green-700 rounded-xl text-lg font-[600] cursor-pointer hover:from-green-700 hover:to-green-600 active:scale-95 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed disabled:active:scale-100 text-white shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
             >
-              {processing ? "กำลังประมวลผล..." : "Confrim the payment ✓"}
+              {processing ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  <span>กำลังประมวลผล...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>ยืนยันการชำระเงิน</span>
+                </>
+              )}
             </button>
-          </li>
-        </ul>
+          </div>
+        </div>
       </div>
     </main>
   );

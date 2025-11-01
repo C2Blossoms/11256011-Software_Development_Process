@@ -1,38 +1,43 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-export default function ProductPage() {
+function ProductPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
   // State สำหรับเก็บข้อมูลสินค้า
   const [products, setProducts] = useState([]);
+  const [allProducts, setAllProducts] = useState([]); // เก็บข้อมูลทั้งหมด
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // State สำหรับ filters
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedPrice, setSelectedPrice] = useState("");
   
   // State สำหรับ cart
   const [cart, setCart] = useState(null);
   const [cartLoading, setCartLoading] = useState(false);
   const [productCache, setProductCache] = useState({});
-  // Modal states
-  const [showModal, setShowModal] = useState(false);
-  const [modalLoading, setModalLoading] = useState(false);
-  const [modalError, setModalError] = useState(null);
-  const [modalSuccess, setModalSuccess] = useState(false);
+  // State สำหรับ tracking การเพิ่มสินค้าลงตะกร้า (ป้องกัน double-click)
+  const [addingToCart, setAddingToCart] = useState(new Set());
+  // State สำหรับ tracking การลบสินค้าออกจากตะกร้า (ป้องกัน double-click)
+  const [removingFromCart, setRemovingFromCart] = useState(new Set());
 
-  // Form data
-  const [formData, setFormData] = useState({
-    sku: "",
-    name: "",
-    description: "",
-    price: "",
-    stock: "",
-    status: "active",
-  });
-
-  const [images, setImages] = useState([]);
-  const [uploadingImages, setUploadingImages] = useState([]);
+  // อ่าน category จาก URL query parameter
+  useEffect(() => {
+    const categoryParam = searchParams?.get("category");
+    if (categoryParam) {
+      const validCategories = ["DUMBBELLS", "TREADMILLS", "WHEY PROTEIN"];
+      if (validCategories.includes(categoryParam)) {
+        setSelectedCategory(categoryParam);
+      }
+    }
+  }, [searchParams]);
 
   // ดึงข้อมูลจาก backend ตอนหน้าโหลด
   useEffect(() => {
@@ -57,6 +62,12 @@ export default function ProductPage() {
       
       if (response.ok) {
         const cartData = await response.json();
+        console.log("Cart data received:", cartData);
+        console.log("Cart items:", cartData.items);
+        if (cartData.items && cartData.items.length > 0) {
+          console.log("First cart item:", cartData.items[0]);
+          console.log("First cart item keys:", Object.keys(cartData.items[0]));
+        }
         setCart(cartData);
         
         // ดึง product data สำหรับ cart items
@@ -90,10 +101,23 @@ export default function ProductPage() {
   };
 
   const addToCart = async (productId, qty = 1) => {
+    // ป้องกัน double-click - ถ้ากำลังเพิ่มสินค้านี้อยู่แล้ว ไม่ทำอะไร
+    if (addingToCart.has(productId)) {
+      return;
+    }
+
     try {
+      // เพิ่ม productId เข้า Set เพื่อป้องกันการกดซ้ำ
+      setAddingToCart(prev => new Set(prev).add(productId));
+
       const token = localStorage.getItem("access_token");
       if (!token) {
         alert("กรุณาเข้าสู่ระบบก่อน");
+        setAddingToCart(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(productId);
+          return newSet;
+        });
         return;
       }
       
@@ -105,7 +129,7 @@ export default function ProductPage() {
         },
         body: JSON.stringify({
           product_id: productId,
-          qty: qty,
+          qty: 1, // บังคับให้ส่ง 1 เสมอ (backend จะเพิ่มทีละ 1)
         }),
       });
       
@@ -150,18 +174,57 @@ export default function ProductPage() {
     } catch (err) {
       console.error("Error adding to cart:", err);
       alert("เกิดข้อผิดพลาดในการเพิ่มสินค้า: " + (err.message || "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้"));
+    } finally {
+      // ลบ productId ออกจาก Set เพื่อให้สามารถกดได้อีกครั้ง
+      setAddingToCart(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(productId);
+        return newSet;
+      });
     }
   };
 
   const removeFromCart = async (itemId) => {
+    // ตรวจสอบว่า itemId ถูกต้องหรือไม่
+    if (!itemId || itemId === undefined || itemId === null) {
+      console.error("Invalid itemId:", itemId);
+      alert("ไม่สามารถลบสินค้าได้: ไม่พบรหัสสินค้า");
+      return;
+    }
+
+    // แปลงเป็น number ถ้ายังไม่ใช่
+    const id = typeof itemId === 'string' ? parseInt(itemId, 10) : Number(itemId);
+    if (isNaN(id) || id <= 0) {
+      console.error("Invalid itemId format:", itemId, "parsed as:", id);
+      alert("ไม่สามารถลบสินค้าได้: รหัสสินค้าไม่ถูกต้อง");
+      return;
+    }
+
+    // ป้องกัน double-click - ถ้ากำลังลบสินค้านี้อยู่แล้ว ไม่ทำอะไร
+    if (removingFromCart.has(id)) {
+      console.log("Already removing item:", id);
+      return;
+    }
+
     try {
+      // เพิ่ม itemId เข้า Set เพื่อป้องกันการกดซ้ำ
+      setRemovingFromCart(prev => new Set(prev).add(id));
+
       const token = localStorage.getItem("access_token");
       if (!token) {
         alert("กรุณาเข้าสู่ระบบ");
+        setRemovingFromCart(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(id);
+          return newSet;
+        });
         return;
       }
       
-      const response = await fetch(`${API_URL}/cart/items?id=${itemId}`, {
+      const url = `${API_URL}/cart/items?id=${id}`;
+      console.log("Removing cart item:", url, "itemId:", itemId, "parsed id:", id);
+      
+      const response = await fetch(url, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -169,7 +232,10 @@ export default function ProductPage() {
         },
       });
       
+      console.log("Remove response status:", response.status);
+      
       if (response.ok || response.status === 204) {
+        console.log("Item removed successfully, refreshing cart...");
         await fetchCart();
       } else {
         const errorText = await response.text().catch(() => "เกิดข้อผิดพลาด");
@@ -178,7 +244,14 @@ export default function ProductPage() {
       }
     } catch (err) {
       console.error("Error removing from cart:", err);
-      alert("เกิดข้อผิดพลาดในการลบสินค้า: " + err.message);
+      alert("เกิดข้อผิดพลาดในการลบสินค้า: " + (err.message || "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้"));
+    } finally {
+      // ลบ itemId ออกจาก Set เพื่อให้สามารถกดได้อีกครั้ง
+      setRemovingFromCart(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
     }
   };
 
@@ -193,28 +266,32 @@ export default function ProductPage() {
           return;
         }
         
-        const deletePromises = cart.items.map(async (item) => {
-          const response = await fetch(`${API_URL}/cart/items?id=${item.id}`, {
-            method: "DELETE",
-            headers: {
-              "Authorization": `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
-          
-          if (!response.ok && response.status !== 204) {
-            const errorText = await response.text().catch(() => "เกิดข้อผิดพลาด");
-            throw new Error(`Failed to delete item ${item.id}: ${errorText}`);
-          }
-          return response;
+        // เรียก API เพื่อลบรายการทั้งหมดในตะกร้า
+        const response = await fetch(`${API_URL}/cart`, {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         });
         
-        await Promise.all(deletePromises);
-        await fetchCart();
-        alert("ล้างตะกร้าเรียบร้อยแล้ว");
+        if (response.ok || response.status === 204) {
+          // รีเซ็ต state ทันที
+          setCart(prev => prev ? { ...prev, items: [] } : null);
+          setProductCache({});
+          
+          // รีเฟรช cart อีกครั้งเพื่อให้แน่ใจว่าข้อมูลตรงกัน
+          await fetchCart();
+          alert("ล้างตะกร้าเรียบร้อยแล้ว");
+        } else {
+          const errorText = await response.text().catch(() => "เกิดข้อผิดพลาด");
+          throw new Error(errorText);
+        }
       } catch (err) {
         console.error("Error clearing cart:", err);
         alert("เกิดข้อผิดพลาดในการล้างตะกร้า: " + err.message);
+        // ถ้าเกิด error ให้ refresh cart เพื่อให้แน่ใจว่า state ตรงกับ backend
+        await fetchCart();
       }
     }
   };
@@ -231,15 +308,65 @@ export default function ProductPage() {
       }
 
       const data = await response.json();
-      setProducts(data || []);
+      setAllProducts(data || []);
+      applyFilters(data || []);
     } catch (err) {
       console.error("Error fetching products:", err);
       setError(err.message);
       setProducts([]);
+      setAllProducts([]);
     } finally {
       setLoading(false);
     }
   };
+
+  // ฟังก์ชันสำหรับกรองสินค้า
+  const applyFilters = (productList, category, price) => {
+    let filtered = [...productList];
+
+    // Filter ตาม Category (ค้นหาจากชื่อสินค้า)
+    if (category && category !== "All" && category !== "") {
+      // แปลง category เป็น pattern ที่สามารถ match กับชื่อสินค้าได้
+      let searchPattern = "";
+      if (category === "DUMBBELLS") {
+        searchPattern = "dumbbell";
+      } else if (category === "TREADMILLS") {
+        searchPattern = "treadmill";
+      } else if (category === "WHEY PROTEIN") {
+        searchPattern = "whey";
+      }
+      
+      if (searchPattern) {
+        filtered = filtered.filter(product => 
+          product.name.toLowerCase().includes(searchPattern.toLowerCase())
+        );
+      }
+    }
+
+    // Filter ตาม Price
+    if (price && price !== "All" && price !== "") {
+      filtered = filtered.filter(product => {
+        if (price === "under 500฿") {
+          return product.price < 500;
+        } else if (price === "500 - 1000฿") {
+          return product.price >= 500 && product.price <= 1000;
+        } else if (price === "over 1000฿") {
+          return product.price > 1000;
+        }
+        return true;
+      });
+    }
+
+    setProducts(filtered);
+  };
+
+  // เมื่อ filter เปลี่ยนให้กรองสินค้าใหม่
+  useEffect(() => {
+    if (allProducts.length > 0) {
+      applyFilters(allProducts, selectedCategory, selectedPrice);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCategory, selectedPrice]);
 
   const getProductImage = (product) => {
     if (product.images && product.images.length > 0) {
@@ -261,138 +388,6 @@ export default function ProductPage() {
     return "/placeholder-product.png";
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleImageChange = async (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
-
-    setUploadingImages((prev) => [...prev, ...files]);
-
-    try {
-      const uploadPromises = files.map(async (file) => {
-        const formDataUpload = new FormData();
-        formDataUpload.append("image", file);
-
-        const response = await fetch(`${API_URL}/products/upload-image`, {
-          method: "POST",
-          body: formDataUpload,
-        });
-
-        if (!response.ok) {
-          throw new Error(`Upload failed`);
-        }
-
-        const data = await response.json();
-        return data.image_url;
-      });
-
-      const uploadedUrls = await Promise.all(uploadPromises);
-      setImages((prev) => [...prev, ...uploadedUrls]);
-      setUploadingImages([]);
-    } catch (err) {
-      console.error("Error uploading images:", err);
-      setModalError(err.message);
-      setUploadingImages([]);
-    }
-  };
-
-  const removeImage = (index) => {
-    setImages((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setModalLoading(true);
-    setModalError(null);
-    setModalSuccess(false);
-
-    try {
-      if (
-        !formData.sku ||
-        !formData.name ||
-        !formData.price ||
-        !formData.stock
-      ) {
-        throw new Error("กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน");
-      }
-
-      const productData = {
-        sku: formData.sku,
-        name: formData.name,
-        description: formData.description || "",
-        price: parseFloat(formData.price),
-        stock: parseInt(formData.stock),
-        status: formData.status,
-        image_urls: images,
-      };
-
-      const response = await fetch(`${API_URL}/products`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(productData),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to create product`);
-      }
-
-      setModalSuccess(true);
-
-      setFormData({
-        sku: "",
-        name: "",
-        description: "",
-        price: "",
-        stock: "",
-        status: "active",
-      });
-      setImages([]);
-
-      await fetchProducts();
-
-      setTimeout(() => {
-        setShowModal(false);
-        setModalSuccess(false);
-      }, 1500);
-    } catch (err) {
-      console.error("Error creating product:", err);
-      setModalError(err.message);
-    } finally {
-      setModalLoading(false);
-    }
-  };
-
-  const openModal = () => {
-    setShowModal(true);
-    setModalError(null);
-    setModalSuccess(false);
-  };
-
-  const closeModal = () => {
-    setShowModal(false);
-    setFormData({
-      sku: "",
-      name: "",
-      description: "",
-      price: "",
-      stock: "",
-      status: "active",
-    });
-    setImages([]);
-    setModalError(null);
-    setModalSuccess(false);
-  };
-
-
   return (
     <main className="bg-gradient-to-b from-black to-[#1F1F1F] min-h-screen bg-[1d1d20]">
       <div className="relative gap-1 self-center justify-self-center top-0 w-[90%] mx-auto bg-neutral-600/30 backdrop-blur-sm rounded-[40px] backdrop-opacity-10 border-2 p-6">
@@ -406,25 +401,15 @@ export default function ProductPage() {
               Category
             </span>
             <div className="pb-4 grid w-40">
-              <select className="pl-1 col-start-1 row-start-1 appearance-none bg-gray-800 border-2 rounded w-40 font-[sans-serif] text-lg font-[500] text-nowrap drop-shadow-2xl z-10 text-white">
-                <option>All</option>
-                <option>Dumbell</option>
-                <option>Treadmill</option>
-                <option>Whey protein</option>
-              </select>
-              <img
-                src="selec-1.png"
-                className="mr-1.5 pointer-events-none flex self-center justify-self-end w-5 col-start-1 row-start-1 z-20"
-              />
-            </div>
-            <span className="font-[sans-serif] text-xl font-[400] text-nowrap drop-shadow-2xl cursor-default text-white">
-              Brand
-            </span>
-            <div className="pb-4 grid w-40">
-              <select className="pl-1 col-start-1 row-start-1 appearance-none bg-gray-800 border-2 rounded w-40 font-[sans-serif] text-lg font-[500] text-nowrap drop-shadow-2xl z-10 text-white">
-                <option>All</option>
-                <option>brand1</option>
-                <option>brand2</option>
+               <select 
+                 value={selectedCategory}
+                 onChange={(e) => setSelectedCategory(e.target.value)}
+                 className="pl-1 col-start-1 row-start-1 appearance-none bg-gray-800 border-2 rounded w-40 font-[sans-serif] text-lg font-[500] text-nowrap drop-shadow-2xl z-10 text-white cursor-pointer"
+               >
+                 <option value="">All</option>
+                 <option value="DUMBBELLS">DUMBBELLS</option>
+                 <option value="TREADMILLS">TREADMILLS</option>
+                 <option value="WHEY PROTEIN">WHEY PROTEIN</option>
               </select>
               <img
                 src="selec-1.png"
@@ -435,11 +420,15 @@ export default function ProductPage() {
               Price
             </span>
             <div className="grid w-40">
-              <select className="pl-1 col-start-1 row-start-1 appearance-none bg-gray-800 border-2 rounded w-40 font-[sans-serif] text-lg font-[500] text-nowrap drop-shadow-2xl z-10 text-white">
-                <option>All</option>
-                <option>under 500฿</option>
-                <option>500 - 1000฿</option>
-                <option>over 1000฿</option>
+              <select 
+                value={selectedPrice}
+                onChange={(e) => setSelectedPrice(e.target.value)}
+                className="pl-1 col-start-1 row-start-1 appearance-none bg-gray-800 border-2 rounded w-40 font-[sans-serif] text-lg font-[500] text-nowrap drop-shadow-2xl z-10 text-white cursor-pointer"
+              >
+                <option value="">All</option>
+                <option value="under 500฿">under 500฿</option>
+                <option value="500 - 1000฿">500 - 1000฿</option>
+                <option value="over 1000฿">over 1000฿</option>
               </select>
               <img
                 src="selec-1.png"
@@ -452,46 +441,8 @@ export default function ProductPage() {
           <div className="flex flex-col order-2 mt-15 w-[62%] font-[sans-serif] ml-4">
             <div className="flex justify-between items-center mb-6">
               <div className="text-xl font-[600] text-nowrap drop-shadow-2xl cursor-default text-white">
-                Product
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={async () => {
-                    if (confirm("ต้องการเปลี่ยนสินค้าทั้งหมดเป็นสถานะพร้อมขายหรือไม่?")) {
-                      try {
-                        const response = await fetch(`${API_URL}/products`);
-                        if (response.ok) {
-                          const products = await response.json();
-                          const updatePromises = products.map(product =>
-                            fetch(`${API_URL}/products/${product.id}`, {
-                              method: "PATCH",
-                              headers: {
-                                "Content-Type": "application/json",
-                              },
-                              body: JSON.stringify({ status: "active" }),
-                            })
-                          );
-                          await Promise.all(updatePromises);
-                          alert("เปลี่ยนสถานะสินค้าทั้งหมดเป็นพร้อมขายเรียบร้อย");
-                          fetchProducts();
-                        }
-                      } catch (err) {
-                        console.error("Error updating products:", err);
-                        alert("เกิดข้อผิดพลาด");
-                      }
-                    }
-                  }}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition font-semibold text-sm"
-                >
-                  เปลี่ยนเป็นพร้อมขายทั้งหมด
-                </button>
-                <button
-                  onClick={openModal}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition font-semibold text-sm"
-                >
-                  + เพิ่มสินค้า
-                </button>
-              </div>
+            Product
+          </div>
             </div>
 
             {loading ? (
@@ -512,12 +463,6 @@ export default function ProductPage() {
             ) : products.length === 0 ? (
               <div className="text-white text-center py-20">
                 <div className="text-xl mb-2">ไม่มีสินค้าในระบบ</div>
-                <button
-                  onClick={openModal}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded mt-4"
-                >
-                  เพิ่มสินค้าแรก
-                </button>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -566,13 +511,16 @@ export default function ProductPage() {
                     {product.status === "active" && product.stock > 0 && (
                       <div className="px-4 pb-4">
                         <button
+                          type="button"
                           onClick={(e) => {
                             e.preventDefault();
+                            e.stopPropagation();
                             addToCart(product.id, 1);
                           }}
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition text-sm"
+                          disabled={addingToCart.has(product.id)}
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition text-sm disabled:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          เพิ่มลงตะกร้า
+                          {addingToCart.has(product.id) ? "กำลังเพิ่ม..." : "เพิ่มลงตะกร้า"}
                         </button>
                       </div>
                     )}
@@ -599,7 +547,7 @@ export default function ProductPage() {
                     const product = productCache[item.product_id];
                     const price = (item.unit_price / 100).toFixed(2);
                     return (
-                      <div key={item.id} className="bg-gray-700 rounded-lg p-3 shadow-md">
+                      <div key={item.id || item.ID} className="bg-gray-700 rounded-lg p-3 shadow-md">
                         <div className="flex justify-between items-start gap-2">
                           <div className="flex-1 min-w-0">
                             <div className="text-white text-sm font-semibold truncate">
@@ -611,14 +559,28 @@ export default function ProductPage() {
                             <div className="text-yellow-400 text-sm mt-1 font-semibold">
                               ฿{((item.unit_price * item.qty) / 100).toFixed(2)}
                             </div>
-                          </div>
+            </div>
                           <button
-                            onClick={() => removeFromCart(item.id)}
-                            className="text-red-400 hover:text-red-600 text-xl ml-2 flex-shrink-0 w-6 h-6 flex items-center justify-center rounded hover:bg-red-900/20 transition"
-                            title="ลบ"
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              console.log("Remove button clicked, item:", item);
+                              // รองรับทั้ง item.id และ item.ID (uppercase)
+                              const itemId = item?.id || item?.ID;
+                              if (!item || !itemId) {
+                                console.error("Item or item.id is missing:", item);
+                                alert("ไม่สามารถลบสินค้าได้: ไม่พบข้อมูลสินค้า");
+                                return;
+                              }
+                              removeFromCart(itemId);
+                            }}
+                            disabled={!item || (!item.id && !item.ID) || removingFromCart.has(Number(item.id || item.ID))}
+                            className="text-red-400 hover:text-red-600 text-xl ml-2 flex-shrink-0 w-6 h-6 flex items-center justify-center rounded hover:bg-red-900/20 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            title={(!item || (!item.id && !item.ID) || removingFromCart.has(Number(item.id || item.ID))) ? "กำลังลบ..." : "ลบ"}
                           >
-                            ×
-                          </button>
+                            {(!item || (!item.id && !item.ID) || removingFromCart.has(Number(item.id || item.ID))) ? "..." : "×"}
+            </button>
                         </div>
                       </div>
                     );
@@ -653,202 +615,20 @@ export default function ProductPage() {
           </div>
         </div>
       </div>
-      {/* Modal สำหรับเพิ่มสินค้า */}
-      {showModal && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
-          onClick={closeModal}
-        >
-          <div
-            className="bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold text-white">
-                  เพิ่มสินค้าใหม่
-                </h2>
-                <button
-                  onClick={closeModal}
-                  className="text-gray-400 hover:text-white text-3xl leading-none"
-                  disabled={modalLoading}
-                >
-                  ×
-                </button>
-              </div>
-
-              {modalError && (
-                <div className="mb-4 p-3 bg-red-900/50 border border-red-700 rounded text-red-200 text-sm">
-                  <strong>เกิดข้อผิดพลาด:</strong> {modalError}
-                </div>
-              )}
-
-              {modalSuccess && (
-                <div className="mb-4 p-3 bg-green-900/50 border border-green-700 rounded text-green-200 text-sm">
-                  <strong>สำเร็จ!</strong> เพิ่มสินค้าเรียบร้อยแล้ว
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-white mb-1 text-sm font-semibold">
-                      SKU <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="sku"
-                      value={formData.sku}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
-                      placeholder="เช่น PROD001"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-white mb-1 text-sm font-semibold">
-                      ชื่อสินค้า <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
-                      placeholder="เช่น ดัมเบล 5 กก."
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-white mb-1 text-sm font-semibold">
-                    คำอธิบาย
-                  </label>
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    rows={3}
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
-                    placeholder="รายละเอียดสินค้า..."
-                  />
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-white mb-1 text-sm font-semibold">
-                      ราคา (฿) <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      name="price"
-                      value={formData.price}
-                      onChange={handleInputChange}
-                      required
-                      min="0"
-                      step="0.01"
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-white mb-1 text-sm font-semibold">
-                      สต็อก <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      name="stock"
-                      value={formData.stock}
-                      onChange={handleInputChange}
-                      required
-                      min="0"
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-white mb-1 text-sm font-semibold">
-                      สถานะ
-                    </label>
-                    <input
-                      type="text"
-                      value="พร้อมขาย"
-                      disabled
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm opacity-60 cursor-not-allowed"
-                    />
-                    <input type="hidden" name="status" value="active" />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-white mb-1 text-sm font-semibold">
-                    รูปภาพสินค้า
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleImageChange}
-                    disabled={uploadingImages.length > 0}
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
-                  />
-                  {uploadingImages.length > 0 && (
-                    <p className="mt-2 text-yellow-400 text-xs">
-                      กำลังอัปโหลด {uploadingImages.length} รูป...
-                    </p>
-                  )}
-
-                  {images.length > 0 && (
-                    <div className="mt-3 grid grid-cols-4 gap-2">
-                      {images.map((imgUrl, index) => (
-                        <div key={index} className="relative">
-                          <img
-                            src={`${API_URL}${imgUrl}`}
-                            alt={`Preview ${index + 1}`}
-                            className="w-full h-24 object-cover rounded border border-gray-600"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeImage(index)}
-                            className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
-                          >
-                            ×
-                          </button>
-                          {index === 0 && (
-                            <span className="absolute bottom-1 left-1 bg-blue-600 text-white text-xs px-1 py-0.5 rounded">
-                              หลัก
-                            </span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-3 pt-2">
-                  <button
-                    type="submit"
-                    disabled={modalLoading}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded transition text-sm"
-                  >
-                    {modalLoading ? "กำลังบันทึก..." : "บันทึกสินค้า"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={closeModal}
-                    disabled={modalLoading}
-                    className="px-4 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-700 text-white font-semibold rounded transition text-sm"
-                  >
-                    ยกเลิก
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
+  );
+}
+
+export default function ProductPage() {
+  return (
+    <Suspense fallback={
+      <main className="bg-gradient-to-b from-black to-[#1F1F1F] min-h-screen bg-[1d1d20]">
+        <div className="text-white text-center py-20">
+          <div className="text-xl mb-2">กำลังโหลด...</div>
+        </div>
+      </main>
+    }>
+      <ProductPageContent />
+    </Suspense>
   );
 }

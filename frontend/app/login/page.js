@@ -113,6 +113,22 @@ function LoginForm() {
       localStorage.setItem("loggedIn", "true");
       localStorage.setItem("loggedInExpires", String(expiry));
       
+      // ตรวจสอบ role - ถ้าเป็น admin ให้ redirect ไปหน้า admin login และไม่เก็บ token
+      if (data?.user?.role === "admin") {
+        setError("บัญชีนี้เป็น Admin Account กรุณาเข้าสู่ระบบที่หน้า Admin Login");
+        // ไม่เก็บ token หรือข้อมูล user
+        setTimeout(() => {
+          router.push(`/admin/login?next=${encodeURIComponent(next || "/admin")}`);
+        }, 2000);
+        return;
+      }
+
+      // ตรวจสอบว่าเป็น user role เท่านั้น
+      if (data?.user?.role && data?.user?.role !== "user") {
+        setError("บัญชีนี้ไม่ใช่ User Account กรุณาเข้าสู่ระบบด้วยบัญชี User");
+        return;
+      }
+
       // เก็บข้อมูล user (ถ้ามี)
       if (data?.user) {
         localStorage.setItem("user", JSON.stringify(data.user));
@@ -159,10 +175,21 @@ function LoginForm() {
             BACK TO HOME
           </a>
         </li>
+        <li>
+          <Link
+            href="/admin/login"
+            className="text-[#0067D1] hover:underline underline-offset-2"
+          >
+            ADMIN LOGIN
+          </Link>
+        </li>
       </ul>
 
       {/* Title */}
-      <h2 className="text-center text-4xl font-bold">Login</h2>
+      <h2 className="text-center text-4xl font-bold">User Login</h2>
+      <p className="text-center text-gray-400 text-sm mb-4">
+        สำหรับผู้ใช้ทั่วไป
+      </p>
 
       {/* Username */}
       <div className="space-y-2">
@@ -232,7 +259,15 @@ function LoginForm() {
       </div>
 
       {/* Google Login Button */}
-      <button className="mx-auto flex w-[80%] items-center justify-center gap-3 rounded-[50px] bg-white py-3 font-semibold text-black transition hover:bg-gray-200">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+          window.location.href = `${API_URL}/auth/oauth/google/start`;
+        }}
+        className="mx-auto flex w-[80%] items-center justify-center gap-3 rounded-[50px] bg-white py-3 font-semibold text-black transition hover:bg-gray-200"
+      >
         {/* Google Logo SVG */}
         <svg
           xmlns="http://www.w3.org/2000/svg"

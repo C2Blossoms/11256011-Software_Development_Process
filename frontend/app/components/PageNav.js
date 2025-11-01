@@ -15,6 +15,7 @@ export default function PageNav() {
     "/",
     "/register",
     "/login",
+    "/admin/login",
     "/payment",
     "/payment/pay_done",
     "/edit_acc",
@@ -150,19 +151,19 @@ export default function PageNav() {
           </a>
         </li>
         <li className="nav-item active:text-[#0067D1] hover:underline underline-offset-2 text-shadow-lg/30 drop-shadow-2xl">
-          <a href="/product" rel="noopener noreferrer">
+          <Link href="/product?category=DUMBBELLS">
             DUMBBELLS
-          </a>
+          </Link>
         </li>
         <li className="nav-item active:text-[#0067D1] hover:underline underline-offset-2 text-shadow-lg/30 drop-shadow-2xl">
-          <a href="/product" rel="noopener noreferrer">
+          <Link href="/product?category=TREADMILLS">
             TREADMILLS
-          </a>
+          </Link>
         </li>
         <li className="nav-item active:text-[#0067D1] hover:underline underline-offset-2 text-shadow-lg/30 drop-shadow-2xl ">
-          <a href="/product" rel="noopener noreferrer">
+          <Link href="/product?category=WHEY%20PROTEIN">
             WHEY PROTEIN
-          </a>
+          </Link>
         </li>
         <li className="nav-item relative -top-[0.8] text-3xl font-[100] underline-offset-2 text-shadow-lg/30 drop-shadow-2xl cursor-default">
           |
@@ -194,6 +195,28 @@ export default function PageNav() {
                   className="block p-2 hover:bg-gray-200 w-full text-left"
                 >
                   Edit Profile
+                </button>
+                <button
+                  onClick={() => {
+                    const userStr = localStorage.getItem("user");
+                    if (userStr) {
+                      try {
+                        const user = JSON.parse(userStr);
+                        if (user.role === "admin") {
+                          router.push("/admin");
+                        } else {
+                          alert("คุณไม่มีสิทธิ์เข้าถึงหน้า Admin");
+                        }
+                      } catch (e) {
+                        router.push("/admin/login");
+                      }
+                    } else {
+                      router.push("/admin/login");
+                    }
+                  }}
+                  className="block p-2 hover:bg-gray-200 w-full text-left"
+                >
+                  Admin Panel
                 </button>
                 <button
                   onClick={handleLogout}

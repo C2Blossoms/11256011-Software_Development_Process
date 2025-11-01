@@ -56,7 +56,7 @@ export default function ProductDetailPage() {
   };
 
   const addToCart = async () => {
-    if (!product || product.stock === 0 || product.status !== "active") {
+    if (!product || product.stock === 0 || product.status !== "active" || addingToCart) {
       return;
     }
 
@@ -66,6 +66,7 @@ export default function ProductDetailPage() {
       if (!token) {
         alert("กรุณาเข้าสู่ระบบก่อน");
         router.push("/login");
+        setAddingToCart(false);
         return;
       }
       
@@ -290,9 +291,14 @@ export default function ProductDetailPage() {
 
               <div className="flex gap-4">
                 <button
-                  onClick={addToCart}
-                  disabled={product.stock === 0 || addingToCart}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition disabled:bg-gray-600 disabled:cursor-not-allowed"
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    addToCart();
+                  }}
+                  disabled={product.stock === 0 || addingToCart || product.status !== "active"}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition disabled:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {addingToCart
                     ? "กำลังเพิ่ม..."

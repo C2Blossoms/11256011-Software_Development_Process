@@ -2,7 +2,7 @@
 import { usePathname } from "next/navigation";
 export default function Footer() {
   const pathname = usePathname();
-  if (pathname === "/", pathname === '/payment') return null;
+  if (pathname === "/") return null;
 
   return (
     <footer className="bg-black text-gray-400 py-10">
