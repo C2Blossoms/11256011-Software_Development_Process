@@ -18,7 +18,9 @@ export default function CheckoutPage() {
     async function loadCart() {
       setLoading(true);
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cart`, { credentials: "include" });
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cart`, {
+          credentials: "include",
+        });
         if (!res.ok) {
           throw new Error(`cart fetch failed: ${res.status}`);
         }
@@ -51,12 +53,15 @@ export default function CheckoutPage() {
     setPlacing(true);
     setError(null);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/checkout/place-order`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ note }),
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/checkout/place-order`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ note }),
+        }
+      );
       if (!res.ok) {
         const txt = await res.text();
         throw new Error(`place order failed: ${res.status} ${txt}`);
@@ -110,29 +115,48 @@ export default function CheckoutPage() {
 
           <div className="pb-10 w-full">
             {loading ? (
-              <span className="flex self-center justify-self-center cursor-default">Loading...</span>
+              <span className="flex self-center justify-self-center cursor-default">
+                Loading...
+              </span>
             ) : cart && cart.items && cart.items.length > 0 ? (
               <div className="p-4">
                 {cart.items.map((it) => (
-                  <div key={it.id ?? `${it.product_id}-${it.product?.id ?? ""}`} className="flex justify-between py-2">
+                  <div
+                    key={it.id ?? `${it.product_id}-${it.product?.id ?? ""}`}
+                    className="flex justify-between py-2"
+                  >
                     <div>
-                      <div className="font-[600]">{it.product?.title ?? it.product_name ?? `Product ${it.product_id}`}</div>
-                      <div className="text-sm text-neutral-400">Qty: {it.qty ?? it.Qty}</div>
+                      <div className="font-[600]">
+                        {it.product?.title ??
+                          it.product_name ??
+                          `Product ${it.product_id}`}
+                      </div>
+                      <div className="text-sm text-neutral-400">
+                        Qty: {it.qty ?? it.Qty}
+                      </div>
                     </div>
-                    <div className="font-[600]">{((it.unit_price ?? it.UnitPrice) / 100).toFixed(2)}</div>
+                    <div className="font-[600]">
+                      {((it.unit_price ?? it.UnitPrice) / 100).toFixed(2)}
+                    </div>
                   </div>
                 ))}
-                <div className="mt-4 flex justify-end font-[700]">Subtotal: {(computeSubtotal(cart.items) / 100).toFixed(2)} ฿</div>
+                <div className="mt-4 flex justify-end font-[700]">
+                  Subtotal: {(computeSubtotal(cart.items) / 100).toFixed(2)} ฿
+                </div>
               </div>
             ) : (
-              <span className="flex self-center justify-self-center cursor-default">No item in the cart</span>
+              <span className="flex self-center justify-self-center cursor-default">
+                No item in the cart
+              </span>
             )}
           </div>
         </div>
 
         <div className="flex justify-between font-[sans-serif] text-nowrap drop-shadow-2xl justify-self-center w-[90%]">
           <div className="justify-self-start flex flex-col ">
-            <span className="pb-4 text-xl font-[500] cursor-default">Address</span>
+            <span className="pb-4 text-xl font-[500] cursor-default">
+              Address
+            </span>
             <form onSubmit={placeOrder}>
               <textarea
                 id="address"
