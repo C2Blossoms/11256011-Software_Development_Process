@@ -72,14 +72,14 @@ func main() {
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", fs))
 
 	// OAuth routes
-	mux.HandleFunc("GET /auth/oauth/{provider}/start", oauthDeps.OAuthStart)
-	mux.HandleFunc("GET /auth/oauth/{provider}/callback", oauthDeps.OAuthCallback)
+	mux.HandleFunc("/auth/oauth/{provider}/start", oauthDeps.OAuthStart)
+	mux.HandleFunc("/auth/oauth/{provider}/callback", oauthDeps.OAuthCallback)
 
 	// Auth routes
-	mux.HandleFunc("POST /auth/register", authDeps.Register)
-	mux.HandleFunc("POST /auth/login", authDeps.Login)
-	mux.HandleFunc("POST /auth/refresh", authDeps.Refresh)
-	mux.HandleFunc("POST /auth/logout", authDeps.Logout)
+	mux.HandleFunc("/auth/register", authDeps.Register)
+	mux.HandleFunc("/auth/login", authDeps.Login)
+	mux.HandleFunc("/auth/refresh", authDeps.Refresh)
+	mux.HandleFunc("/auth/logout", authDeps.Logout)
 
 	// Me
 	mux.Handle("/me", authMw.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

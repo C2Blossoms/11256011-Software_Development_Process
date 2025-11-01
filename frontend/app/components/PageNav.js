@@ -20,9 +20,57 @@ export default function PageNav() {
     "/edit_acc",
   ];
 
+  //logout
+  const logout = () => {
+    localStorage.removeItem("loggedIn");
+    localStorage.removeItem("loggedInExpires");
+    localStorage.removeItem("authToken");
+    setLoggedIn(false);
+    setOpenMenu(false);
+    router.push("/");
+  };
+
   useEffect(() => {
     const token = localStorage.getItem("loggedIn");
     setLoggedIn(token === "true");
+  }, []);
+
+  useEffect(() => {
+    // validate stored login + expiry
+    const check = () => {
+      const token = localStorage.getItem("loggedIn");
+      const expires = parseInt(
+        localStorage.getItem("loggedInExpires") || "0",
+        10
+      );
+      if (token === "true" && expires && Date.now() < expires) {
+        setLoggedIn(true);
+        // set timeout to auto-logout when expired
+        const remaining = expires - Date.now();
+        if (remaining > 0) {
+          const tid = setTimeout(() => {
+            logout();
+          }, remaining);
+          return () => clearTimeout(tid);
+        }
+        return;
+      }
+      // expired or not logged
+      localStorage.removeItem("loggedIn");
+      localStorage.removeItem("loggedInExpires");
+      setLoggedIn(false);
+    };
+
+    const cleanup = check();
+    // also listen storage event (tabs)
+    const onStorage = (e) => {
+      if (e.key === "loggedIn" || e.key === "loggedInExpires") check();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => {
+      if (typeof cleanup === "function") cleanup();
+      window.removeEventListener("storage", onStorage);
+    };
   }, []);
 
   useEffect(() => {
@@ -37,15 +85,11 @@ export default function PageNav() {
 
   if (hiddenPaths.includes(pathname)) return null;
 
-  const goToLogin = () => router.push("/login");
-
-  const logout = () => {
-    localStorage.removeItem("loggedIn");
-    setLoggedIn(false);
-    setOpenMenu(false);
-    router.push("/");
+  const goToLogin = () => {
+    // pass current page for redirect after login
+    router.push(`/login?next=${encodeURIComponent(pathname || "/")}`);
   };
-
+  
   return (
     // <div className="bg-black h-110">
     //   <ul className="nav-list flex justify-center items-center gap-[5%] text-xl font-bold text-white pt-10">

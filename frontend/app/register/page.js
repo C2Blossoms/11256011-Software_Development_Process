@@ -137,17 +137,110 @@
 //   );
 // }
 
-// ...existing code...
 "use client";
 
 import React, { useState } from "react";
-import "swiper/css";
-import "swiper/css/mousewheel";
-import "swiper/css/pagination";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
+  const router = useRouter();
+
+  const [email, setEmail] = useState("");
+  const [name, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  // const [confirmPassword, setConfirmPassword] = useState("");
   const [agreed, setAgreed] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const validate = () => {
+    if (!email) {
+      setError("Please enter your email");
+      return false;
+      // || !confirmPassword
+    }
+    // if (password !== confirmPassword) {
+    //   setError("รหัสผ่านไม่ตรงกัน");
+    //   return false;
+    // }
+
+    // เบื้องต้นตรวจสอบรูปแบบอีเมลง่าย ๆ
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRe.test(email)) {
+      setError("Not a valid email format");
+      return false;
+    }
+
+    if (!name) {
+      setError("Please enter your username");
+      return false;
+    }
+
+    if (!password) {
+      setError("Please enter your password");
+      return false;
+    }
+
+    if (!agreed) {
+      setError("Accepting the privacy policy is required");
+      return false;
+    }
+    setError("");
+    return true;
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    if (!validate()) return;
+
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const url = "http://localhost:8000/auth/register"; // ปรับตาม backend จริง
+      console.log("POST", url, { email, name, password });
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, name, password }),
+        mode: "cors",
+      });
+
+      const text = await res.text().catch(() => "");
+      let data = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (err) {
+        /* not json */
+      }
+
+      console.log("register response", res.status, text);
+
+      if (!res.ok) {
+        // แสดงข้อความจาก body ให้ชัดเจน
+        const message =
+          data?.message ||
+          data?.error ||
+          text ||
+          `Registration failed (status ${res.status})`;
+        setError(message);
+        setLoading(false);
+        return;
+      }
+
+      setSuccess("Registration successful! Redirecting to login...");
+      setTimeout(() => router.push("/login"), 1200);
+    } catch (err) {
+      console.error("register request error:", err);
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <main className="bg-gradient-to-b from-black to-[#1F1F1F] min-h-screen flex flex-col items-center justify-center px-4">
@@ -159,7 +252,10 @@ export default function RegisterPage() {
       </div>
 
       {/* Form Container */}
-      <div className="w-[50%] max-w-md mb-30 bg-neutral-600/30 backdrop-blur-sm rounded-[30px] border-2 p-8 space-y-6 text-white">
+      <form
+        onSubmit={handleRegister}
+        className="w-[50%] max-w-md mb-30 bg-neutral-600/30 backdrop-blur-sm rounded-[30px] border-2 p-8 space-y-6 text-white"
+      >
         {/* Navigation */}
         <ul className="flex justify-center gap-6 text-md font-bold">
           <li>
@@ -176,11 +272,25 @@ export default function RegisterPage() {
         {/* Title */}
         <h2 className="text-center text-4xl font-bold">Register</h2>
 
+        {/* Error / Success */}
+        {error && (
+          <div className="text-sm text-red-400 bg-red-900/20 p-2 rounded">
+            {error}
+          </div>
+        )}
+        {success && (
+          <div className="text-sm text-green-300 bg-green-900/20 p-2 rounded">
+            {success}
+          </div>
+        )}
+
         {/* Email */}
         <div className="space-y-2">
           <label className="text-lg font-bold">Email</label>
           <input
             type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             className="w-full h-12 rounded-[20px] px-4 bg-white text-black placeholder:text-gray-800 placeholder:font-semibold"
             placeholder="Enter here"
           />
@@ -191,6 +301,8 @@ export default function RegisterPage() {
           <label className="text-lg font-bold">Username</label>
           <input
             type="text"
+            value={name}
+            onChange={(e) => setUsername(e.target.value)}
             className="w-full h-12 rounded-[20px] px-4 bg-white text-black placeholder:text-gray-800 placeholder:font-semibold"
             placeholder="Enter here"
           />
@@ -201,20 +313,24 @@ export default function RegisterPage() {
           <label className="text-lg font-bold">Password</label>
           <input
             type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             className="w-full h-12 rounded-[20px] px-4 bg-white text-black placeholder:text-gray-800 placeholder:font-semibold"
             placeholder="Enter here"
           />
         </div>
 
         {/* Confirm Password */}
-        <div className="space-y-2">
+        {/* <div className="space-y-2">
           <label className="text-lg font-bold">Confirm Password</label>
           <input
             type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
             className="w-full h-12 rounded-[20px] px-4 bg-white text-black placeholder:text-gray-800 placeholder:font-semibold"
             placeholder="Enter here"
           />
-        </div>
+        </div> */}
 
         {/* Policy checkbox (added) */}
         <div className="flex items-start gap-3 text-sm text-neutral-200">
@@ -229,28 +345,24 @@ export default function RegisterPage() {
             I have read and accept{" "}
             <Link href="/privacy_policy" className="text-[#0067D1] underline">
               Privacy Policy
-            </Link>{" "}
-            {/* and{" "}
-            <Link href="/terms" className="text-[#0067D1] underline">
-              ข้อกำหนดการให้บริการ
-            </Link> */}
+            </Link>
             . (It is necessary to check before proceeding.)
           </label>
         </div>
 
         {/* Button */}
         <button
-          type="button"
-          disabled={!agreed}
-          aria-disabled={!agreed}
+          type="submit"
+          disabled={!agreed || loading}
+          aria-disabled={!agreed || loading}
           className={`mb-8 flex mx-auto justify-center items-center w-50 h-13 rounded-xl text-xl font-[600] cursor-pointer transition-colors
             ${
-              agreed
-                ? "bg-[#0067D1] hover:bg-[#0040a1] active:border-3 border-[#0079e3] text-white"
-                : "bg-neutral-700 text-neutral-400 opacity-60 hover:cursor-not-allowed hover:select-none"
+              !agreed || loading
+                ? "bg-neutral-700 text-neutral-400 opacity-60 hover:cursor-not-allowed hover:select-none"
+                : "bg-[#0067D1] hover:bg-[#0040a1] active:border-3 border-[#0079e3] text-white"
             }`}
         >
-          continue ≫
+          {loading ? "processing..." : "continue ≫"}
         </button>
 
         {/* Register Link */}
@@ -274,7 +386,10 @@ export default function RegisterPage() {
         </div>
 
         {/* Google Login Button */}
-        <button className="mx-auto flex w-[80%] items-center justify-center gap-3 rounded-[50px] bg-white py-3 font-semibold text-black transition hover:bg-gray-200">
+        <button
+          type="button"
+          className="mx-auto flex w-[80%] items-center justify-center gap-3 rounded-[50px] bg-white py-3 font-semibold text-black transition hover:bg-gray-200"
+        >
           {/* Google Logo SVG */}
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -304,8 +419,7 @@ export default function RegisterPage() {
         </button>
 
         {/* === ADDED SECTION END === */}
-      </div>
+      </form>
     </main>
   );
 }
-// ...existing code...

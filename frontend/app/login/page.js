@@ -1,8 +1,6 @@
 "use client";
 
-import "swiper/css";
-import "swiper/css/mousewheel";
-import "swiper/css/pagination";
+import React, { useState, Suspense } from "react";
 import Link from "next/link";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
@@ -16,82 +14,103 @@ function handleGoogleLogin() {
 
 export default function LoginPage() {
   return (
-    <main className="bg-gradient-to-b from-black to-[#1F1F1F] min-h-screen flex flex-col items-center justify-center px-4">
-      {/* Logo */}
-      <div className="mb-6">
-        <Link href="/" className="logo">
-          <img className="mt-15 w-70" src="/Vector.png" alt="Logo" />
-        </Link>
+    <form
+      onSubmit={handleLogin}
+      className="w-[50%] max-w-md mb-30 bg-neutral-600/30 backdrop-blur-sm rounded-[30px] border-2 p-8 space-y-6 text-white"
+    >
+      {error && (
+        <div className="bg-red-500/10 border border-red-500 text-red-500 px-4 py-2 rounded">
+          {error}
+        </div>
+      )}
+
+      {success && (
+        <div className="bg-green-500/10 border border-green-500 text-green-500 px-4 py-2 rounded">
+          {success}
+        </div>
+      )}
+      {/* Navigation */}
+      <ul className="flex justify-center gap-6 text-md font-bold">
+        <li>
+          <a
+            href="/"
+            rel="noopener noreferrer"
+            className="text-[#0067D1] hover:underline underline-offset-2"
+          >
+            BACK TO HOME
+          </a>
+        </li>
+      </ul>
+
+      {/* Title */}
+      <h2 className="text-center text-4xl font-bold">Login</h2>
+
+      {/* Username */}
+      <div className="space-y-2">
+        <label className="text-lg font-bold">Email</label>
+        <input
+          type="text"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full h-12 rounded-[20px] px-4 bg-white text-black placeholder:text-gray-800 placeholder:font-semibold"
+          placeholder="Enter here"
+        />
       </div>
 
-      {/* Form Container */}
-      <div className="w-[50%] max-w-md mb-30 bg-neutral-600/30 backdrop-blur-sm rounded-[30px] border-2 p-8 space-y-6 text-white">
-        {/* Navigation */}
-        <ul className="flex justify-center gap-6 text-md font-bold">
-          <li>
-            <a
-              href="/"
-              rel="noopener noreferrer"
-              className="text-[#0067D1] hover:underline underline-offset-2"
-            >
-              BACK TO HOME
-            </a>
-          </li>
-        </ul>
+      {/* Password */}
+      <div className="space-y-2">
+        <label className="text-lg font-bold">Password</label>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full h-12 rounded-[20px] px-4 bg-white text-black placeholder:text-gray-800 placeholder:font-semibold"
+          placeholder="Enter here"
+        />
+      </div>
 
-        {/* Title */}
-        <h2 className="text-center text-4xl font-bold">Login</h2>
-
-        {/* Username */}
-        <div className="space-y-2">
-          <label className="text-lg font-bold">Username</label>
-          <input
-            type="text"
-            className="w-full h-12 rounded-[20px] px-4 bg-white text-black placeholder:text-gray-800 placeholder:font-semibold"
-            placeholder="Enter here"
-          />
-        </div>
-
-        {/* Password */}
-        <div className="space-y-2">
-          <label className="text-lg font-bold">Password</label>
-          <input
-            type="password"
-            className="w-full h-12 rounded-[20px] px-4 bg-white text-black placeholder:text-gray-800 placeholder:font-semibold"
-            placeholder="Enter here"
-          />
-        </div>
-
-        {/* Button */}
-        <button
-          onClick={() => {
-            localStorage.setItem("loggedIn", "true");
-            window.location.href = "/product";
-          }}
-          className="mb-8 flex justify-self-center justify-center items-center w-50 h-13 bg-[#0067D1] rounded-xl text-xl font-[600] hover:bg-blue-800 active:bg-blue-900 hover:cursor-pointer transition"
-        >
-          login ≫
-        </button>
-
-        {/* Register Link */}
-        <p className="text-center text-md">
-          Don't have an account?{" "}
-          <Link
-            href="/register"
-            className="text-md text-[#0067D1] hover:underline"
+      {/* Button */}
+      {/* <button
+            onClick={() => {
+              localStorage.setItem("loggedIn", "true");
+              window.location.href = "/product";
+            }}
+            className="mb-8 flex justify-self-center justify-center items-center w-50 h-13 bg-[#0067D1] rounded-xl text-xl font-[600] hover:bg-blue-800 active:bg-blue-900 hover:cursor-pointer transition"
           >
-            register
-          </Link>
-        </p>
+            login ≫
+          </button> */}
+      <button
+        type="submit"
+        disabled={loading}
+        aria-disabled={loading}
+        className={`mb-8 flex justify-self-center justify-center items-center w-50 h-13 rounded-xl text-xl font-[600] hover:bg-blue-800 active:bg-blue-900 hover:cursor-pointer transition ${
+          loading
+            ? "bg-neutral-700 text-neutral-400 opacity-60 hover:cursor-not-allowed hover:select-none"
+            : "bg-[#0067D1] hover:bg-[#0040a1] active:border-3 border-[#0079e3] text-white"
+        }`}
+      >
+        {loading ? "processing..." : "login ≫"}
+      </button>
 
-        {/* === ADDED SECTION START === */}
+      {/* Register Link */}
+      <p className="text-center text-md">
+        Don't have an account?{" "}
+        <Link
+          href="/register"
+          className="text-md text-[#0067D1] hover:underline"
+        >
+          register
+        </Link>
+      </p>
 
-        {/* Divider */}
-        <div className="flex items-center gap-4">
-          <div className="h-px w-full bg-neutral-500"></div>
-          <span className="text-sm text-neutral-400">OR</span>
-          <div className="h-px w-full bg-neutral-500"></div>
-        </div>
+      {/* === ADDED SECTION START === */}
+
+      {/* Divider */}
+      <div className="flex items-center gap-4">
+        <div className="h-px w-full bg-neutral-500"></div>
+        <span className="text-sm text-neutral-400">OR</span>
+        <div className="h-px w-full bg-neutral-500"></div>
+      </div>
 
         {/* Google Login Button */}
         <button
@@ -127,6 +146,16 @@ export default function LoginPage() {
           <span>login with Google</span>
         </button>
       </div>
+
+      <Suspense
+        fallback={
+          <div className="w-[50%] max-w-md mb-30 bg-neutral-600/30 backdrop-blur-sm rounded-[30px] border-2 p-8 space-y-6 text-white">
+            <p className="text-center">Loading...</p>
+          </div>
+        }
+      >
+        <LoginForm />
+      </Suspense>
     </main>
   );
 }

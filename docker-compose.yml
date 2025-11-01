@@ -1,7 +1,11 @@
-version: '3.9'
+version: "3.9"
 
 x-healthcheck-mysql: &mysql_hc
-  test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+  test:
+    [
+      "CMD-SHELL",
+      "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent",
+    ]
   interval: 5s
   timeout: 3s
   retries: 20
@@ -67,7 +71,7 @@ services:
     healthcheck: *mysql_hc
     restart: unless-stopped
     init: true
-  
+
   phpmyadmin:
     image: phpmyadmin/phpmyadmin:5.2
     env_file: .env
