@@ -1,8 +1,4 @@
 "use client";
-<<<<<<< Updated upstream
-
-=======
->>>>>>> Stashed changes
 import { useEffect, useState } from "react";
 <<<<<<< HEAD
 import Link from "next/link";
@@ -242,7 +238,6 @@ export default function ProductPage() {
     }
     load();
   }, []);
->>>>>>> Stashed changes
 >>>>>>> 570f70c9855f954abdfbd1b091832b37e23b998b
   return (
     <main className="bg-gradient-to-b from-black to-[#1F1F1F] min-h-screen bg-[1d1d20]">

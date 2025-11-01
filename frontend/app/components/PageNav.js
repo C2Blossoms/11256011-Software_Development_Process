@@ -154,7 +154,7 @@ export default function PageNav() {
                   Edit Profile
                 </button>
                 <button
-                  onClick={logout}
+                  onClick={handleLogout}
                   className="block p-2 hover:bg-gray-200 w-full text-left"
                 >
                   Logout
