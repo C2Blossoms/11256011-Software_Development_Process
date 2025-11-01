@@ -4,9 +4,9 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"runtime/debug"
+
+	// "runtime/debug"
 	"strings"
-	"time"
 
 	"github.com/C2Blossoms/Project_SDP/backend/config"
 	dbpkg "github.com/C2Blossoms/Project_SDP/backend/db"
@@ -15,6 +15,7 @@ import (
 	"github.com/C2Blossoms/Project_SDP/backend/models"
 	"github.com/C2Blossoms/Project_SDP/backend/oauth"
 	"github.com/C2Blossoms/Project_SDP/backend/security"
+	"github.com/rs/cors"
 	"gorm.io/gorm/logger"
 )
 
@@ -71,14 +72,14 @@ func main() {
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", fs))
 
 	// OAuth routes
-	mux.HandleFunc("GET /auth/oauth/{provider}/start", oauthDeps.OAuthStart)
-	mux.HandleFunc("GET /auth/oauth/{provider}/callback", oauthDeps.OAuthCallback)
+	mux.HandleFunc("/auth/oauth/{provider}/start", oauthDeps.OAuthStart)
+	mux.HandleFunc("/auth/oauth/{provider}/callback", oauthDeps.OAuthCallback)
 
 	// Auth routes
-	mux.HandleFunc("POST /auth/register", authDeps.Register)
-	mux.HandleFunc("POST /auth/login", authDeps.Login)
-	mux.HandleFunc("POST /auth/refresh", authDeps.Refresh)
-	mux.HandleFunc("POST /auth/logout", authDeps.Logout)
+	mux.HandleFunc("/auth/register", authDeps.Register)
+	mux.HandleFunc("/auth/login", authDeps.Login)
+	mux.HandleFunc("/auth/refresh", authDeps.Refresh)
+	mux.HandleFunc("/auth/logout", authDeps.Logout)
 
 	// Me
 	mux.Handle("/me", authMw.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -137,56 +138,12 @@ func main() {
 		_, _ = w.Write([]byte("ok"))
 	})
 
-	handler := recoverMW(cors(mux))
-
-	addr := ":" + defaultIfEmpty(os.Getenv("PORT"), "8000")
-	srv := &http.Server{
-		Addr:              addr,
-		Handler:           handler,
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       10 * time.Second,
-		WriteTimeout:      15 * time.Second,
-		IdleTimeout:       60 * time.Second,
-	}
-
-	log.Println("Listening on", addr)
-	if err := srv.ListenAndServe(); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func cors(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origin := r.Header.Get("Origin")
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-		w.Header().Set("Vary", "Origin")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		next.ServeHTTP(w, r)
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		AllowCredentials: true,
 	})
-}
 
-func defaultIfEmpty(v, d string) string {
-	if v == "" {
-		return d
-	}
-	return v
-}
-
-func recoverMW(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		defer func() {
-			if rec := recover(); rec != nil {
-				stack := debug.Stack()
-				log.Printf("PANIC %s %s : %v\n%s", r.Method, r.URL.Path, rec, stack)
-				http.Error(w, "internal server error", http.StatusInternalServerError)
-			}
-		}()
-		log.Printf("CALL %s %s", r.Method, r.URL.Path)
-		next.ServeHTTP(w, r)
-	})
+	http.ListenAndServe(":8000", c.Handler(mux))
 }

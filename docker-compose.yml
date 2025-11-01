@@ -32,7 +32,7 @@ services:
       REFRESH_TTL_DAY: ${REFRESH_TTL_DAY}
       DB_AUTOMIGRATE: ${DB_AUTOMIGRATE}
     ports:
-      - "${BACKEND_PORT:-8000}:8000"
+      - "8000:8000"
     depends_on:
       mysql:
         condition: service_healthy
@@ -45,7 +45,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "8080:3000"
+      - "3000:3000"
     depends_on:
       - backend
     restart: unless-stopped
