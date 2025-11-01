@@ -32,7 +32,7 @@ func main() {
 	if cfg.DBAutoMigrate {
 		if err := gdb.AutoMigrate(
 			&models.User{}, &models.OAuthAccount{}, &models.RefreshToken{},
-			&models.Product{},
+			&models.Product{}, &models.ProductImage{},
 			&models.Cart{}, &models.CartItem{},
 			&models.Order{}, &models.OrderItem{}, &models.Payment{},
 		); err != nil {
@@ -103,7 +103,8 @@ func main() {
 	mux.Handle("POST /payments/intent", authMw.RequireAuth(http.HandlerFunc(payH.CreateIntent)))
 	mux.Handle("POST /payments/mock/mark-paid", http.HandlerFunc(payH.MarkPaidMock)) // dev only
 
-	// Products
+	// Products - ต้องวาง route ที่เฉพาะเจาะจงก่อน route ทั่วไป
+	mux.HandleFunc("POST /products/upload-image", productDeps.UploadProductImage)
 	mux.HandleFunc("/products", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -117,6 +118,10 @@ func main() {
 	mux.HandleFunc("/products/", func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/restore") && r.Method == http.MethodPost {
 			productDeps.RestoreProduct(w, r)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/images") && r.Method == http.MethodPost {
+			productDeps.AddProductImage(w, r)
 			return
 		}
 		switch r.Method {
