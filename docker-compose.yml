@@ -32,16 +32,10 @@ services:
       REFRESH_TTL_DAY: ${REFRESH_TTL_DAY}
       DB_AUTOMIGRATE: ${DB_AUTOMIGRATE}
     ports:
-<<<<<<< HEAD
-      - "${BACKEND_PORT:-8000}:8000"
-    volumes:
-      - ./backend/uploads:/app/uploads
-=======
       - "8000:8000"
     depends_on:
       mysql:
         condition: service_healthy
->>>>>>> 570f70c9855f954abdfbd1b091832b37e23b998b
     restart: unless-stopped
     init: true
 
