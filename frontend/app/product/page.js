@@ -1,8 +1,5 @@
 "use client";
-<<<<<<< Updated upstream
 
-=======
->>>>>>> Stashed changes
 import { useEffect, useState } from "react";
 import "swiper/css";
 import "swiper/css/mousewheel";
@@ -10,22 +7,6 @@ import "swiper/css/pagination";
 import { useRouter } from "next/navigation";
 
 export default function ProductPage() {
-<<<<<<< Updated upstream
-  // 🟢 สร้าง state สำหรับเก็บข้อมูลสินค้า
-  const [products, setProducts] = useState([]);
-
-  // 🟢 ดึงข้อมูลจาก backend ตอนหน้าโหลด
-  useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`)
-      .then((res) => res.json())
-      .then((data) => {
-        console.log("Fetched products:", data); // ดูผลลัพธ์ใน console
-        setProducts(data);
-      })
-      .catch((err) => console.error("Error fetching products:", err));
-  }, []);
-  
-=======
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
@@ -47,7 +28,7 @@ export default function ProductPage() {
     }
     load();
   }, []);
->>>>>>> Stashed changes
+
   return (
     <main className="bg-gradient-to-b from-black to-[#1F1F1F] min-h-screen bg-[1d1d20]">
       <div className="relative gap-1 self-center justify-self-center top-0 w-[90%] bg-neutral-600/30 backdrop-blur-s m rounded-[40px] backdrop-opacity-10 border-2">
