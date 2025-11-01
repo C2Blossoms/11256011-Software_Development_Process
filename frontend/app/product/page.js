@@ -1,27 +1,15 @@
 "use client";
 import { useEffect, useState } from "react";
-<<<<<<< HEAD
 import Link from "next/link";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export default function ProductPage() {
   // State สำหรับเก็บข้อมูลสินค้า
-=======
-import "swiper/css";
-import "swiper/css/mousewheel";
-import "swiper/css/pagination";
-import { useRouter } from "next/navigation";
-
-export default function ProductPage() {
-<<<<<<< Updated upstream
-  // 🟢 สร้าง state สำหรับเก็บข้อมูลสินค้า
->>>>>>> 570f70c9855f954abdfbd1b091832b37e23b998b
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-<<<<<<< HEAD
   // Modal states
   const [showModal, setShowModal] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
@@ -214,53 +202,6 @@ export default function ProductPage() {
     setModalSuccess(false);
   };
 
-
-=======
-=======
-  const [products, setProducts] = useState([]);
-  const [cart, setCart] = useState({ items: [] });
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState(null);
-  const router = useRouter();
-
- const fetchCart = async () => {
-    try {
-      const res = await fetch("http://localhost:8000/cart", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-      });
-      if (!res.ok) {
-        if (res.status === 401) {
-          router.push('/login');
-          return;
-        }
-        throw new Error(`Cart fetch failed: ${res.status}`);
-      }
-      const data = await res.json();
-      setCart(data);
-    } catch (error) {
-      console.error("Error fetching cart:", error);
-    }
-  };
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      setErr(null);
-      try {
-        const res = await fetch("/products");
-        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-        const data = await res.json();
-        setProducts(data);
-      } catch (e) {
-        setErr(e.message);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, []);
->>>>>>> 570f70c9855f954abdfbd1b091832b37e23b998b
   return (
     <main className="bg-gradient-to-b from-black to-[#1F1F1F] min-h-screen bg-[1d1d20]">
       <div className="relative gap-1 self-center justify-self-center top-0 w-[90%] mx-auto bg-neutral-600/30 backdrop-blur-sm rounded-[40px] backdrop-opacity-10 border-2 p-6">
@@ -315,7 +256,6 @@ export default function ProductPage() {
               />
             </div>
           </div>
-<<<<<<< HEAD
 
           {/* ========== ตรงกลาง: Product List ========== */}
           <div className="flex flex-col order-2 mt-15 w-[62%] font-[sans-serif]">
@@ -400,31 +340,6 @@ export default function ProductPage() {
                 ))}
               </div>
             )}
-=======
-          <div className="flex justify-center container mx-auto p-6 cursor-default order-2 mt-15 h-full w-[62%] font-[sans-serif] ">
-            <h1 className="mb-4 text-xl font-[600] text-nowrap drop-shadow-2xl">
-              Products
-            </h1>
-            {loading && <div>Loading...</div>}
-            {err && <div className="text-red-500">Error: {err}</div>}
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {products.map((p) => (
-                <div key={p.ID} className="p-4 bg-neutral-800 rounded-lg">
-                  {p.image_url && (
-                    <img
-                      src={p.image_url}
-                      alt={p.name}
-                      className="w-full h-48 object-cover rounded"
-                    />
-                  )}
-                  <h2 className="mt-2 text-lg font-semibold">{p.name}</h2>
-                  <p className="text-sm text-neutral-400">{p.description}</p>
-                  <div className="mt-2 font-bold">{p.price} ฿</div>
-                </div>
-              ))}
-            </div>
->>>>>>> 570f70c9855f954abdfbd1b091832b37e23b998b
           </div>
 
           {/* ========== ด้านขวา: Shopping Cart ========== */}
