@@ -67,8 +67,9 @@ function LoginForm() {
     setSuccess("");
 
     try {
-      const url = "http://localhost:8000/auth/login";
-      console.log("POST", url, { email, password });
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const url = `${API_URL}/auth/login`;
+      console.log("POST", url, { email, password: "***" });
 
       const res = await fetch(url, {
         method: "POST",
@@ -98,18 +99,32 @@ function LoginForm() {
         return;
       }
 
-      // Store tokens instead of session TTL
-      localStorage.setItem("loggedIn", "true");
-      localStorage.setItem("authToken", data.access_token);
-      localStorage.setItem("refreshToken", data.refresh_token);
+      // เก็บ tokens จาก backend
+      if (data?.access_token) {
+        localStorage.setItem("access_token", data.access_token);
+      }
+      if (data?.refresh_token) {
+        localStorage.setItem("refresh_token", data.refresh_token);
+      }
 
-      // Store user info if needed
-      if (data.user) {
+      // เก็บข้อมูล session (24 ชั่วโมง)
+      const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+      const expiry = Date.now() + SESSION_TTL_MS;
+      localStorage.setItem("loggedIn", "true");
+      localStorage.setItem("loggedInExpires", String(expiry));
+      
+      // เก็บข้อมูล user (ถ้ามี)
+      if (data?.user) {
         localStorage.setItem("user", JSON.stringify(data.user));
       }
 
       setSuccess("Login successful");
-      router.push(next || "/product");
+      
+      // รีเฟรชหน้าเพื่อให้ PageNav อัพเดทสถานะ
+      setTimeout(() => {
+        router.push(next || "/product");
+        router.refresh();
+      }, 500);
     } catch (err) {
       console.error("Login request failed:", err);
       setError("Connection error. Please try again.");

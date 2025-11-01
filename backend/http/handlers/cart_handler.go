@@ -30,9 +30,9 @@ func (h *CartHandlers) GetCart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// หา/สร้าง cart ของ user
+	// หา/สร้าง cart ของ user (หาเฉพาะที่ยังไม่ถูกลบ)
 	var cart models.Cart
-	if err := h.DB.Where("user_id = ?", uid).First(&cart).Error; err != nil {
+	if err := h.DB.Where("user_id = ? AND deleted_at IS NULL", uid).First(&cart).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			cart = models.Cart{UserID: uid}
 			if err := h.DB.Create(&cart).Error; err != nil {
@@ -46,9 +46,10 @@ func (h *CartHandlers) GetCart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// โหลด items แบบ query ตรง ๆ (ไม่ใช้ Preload)
+	// ห้ามดึง items ที่ถูก soft delete แล้ว
 	var items []models.CartItem
 	if err := h.DB.
-		Where("cart_id = ?", cart.ID).
+		Where("cart_id = ? AND deleted_at IS NULL", cart.ID).
 		Order("id").
 		Find(&items).Error; err != nil {
 		http.Error(w, "db error (load items)", http.StatusInternalServerError)
@@ -81,9 +82,9 @@ func (h *CartHandlers) AddItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// ensure cart
+	// ensure cart (หาเฉพาะที่ยังไม่ถูกลบ)
 	var cart models.Cart
-	if err := h.DB.WithContext(ctx).Where("user_id = ?", uid).First(&cart).Error; err != nil {
+	if err := h.DB.WithContext(ctx).Where("user_id = ? AND deleted_at IS NULL", uid).First(&cart).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			cart = models.Cart{UserID: uid}
 			if err := h.DB.WithContext(ctx).Create(&cart).Error; err != nil {
@@ -173,17 +174,26 @@ func (h *CartHandlers) RemoveItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// ensure item belongs to user's cart
+	// ensure item belongs to user's cart (หาเฉพาะที่ยังไม่ถูกลบ)
 	var item models.CartItem
-	if err := h.DB.Where("id = ?", id).First(&item).Error; err != nil {
-		http.Error(w, "not found", http.StatusNotFound)
+	if err := h.DB.Where("id = ? AND deleted_at IS NULL", id).First(&item).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			http.Error(w, "not found", http.StatusNotFound)
+		} else {
+			http.Error(w, "db error", http.StatusInternalServerError)
+		}
 		return
 	}
 	var cart models.Cart
-	if err := h.DB.First(&cart, item.CartID).Error; err != nil || cart.UserID != uid {
+	if err := h.DB.Where("id = ? AND deleted_at IS NULL", item.CartID).First(&cart).Error; err != nil {
+		http.Error(w, "cart not found", http.StatusNotFound)
+		return
+	}
+	if cart.UserID != uid {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
+	// Soft delete item
 	if err := h.DB.Delete(&item).Error; err != nil {
 		http.Error(w, "db error", http.StatusInternalServerError)
 		return

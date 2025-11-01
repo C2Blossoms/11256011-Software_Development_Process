@@ -10,10 +10,11 @@ export default function ProductPage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [cart, setCart] = useState({ items: [] });
-  const [err, setErr] = useState(null);
-  const router = useRouter();
-
+  
+  // State สำหรับ cart
+  const [cart, setCart] = useState(null);
+  const [cartLoading, setCartLoading] = useState(false);
+  const [productCache, setProductCache] = useState({});
   // Modal states
   const [showModal, setShowModal] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
@@ -36,7 +37,187 @@ export default function ProductPage() {
   // ดึงข้อมูลจาก backend ตอนหน้าโหลด
   useEffect(() => {
     fetchProducts();
+    fetchCart();
   }, []);
+
+  const fetchCart = async () => {
+    try {
+      setCartLoading(true);
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        setCart(null);
+        return;
+      }
+      
+      const response = await fetch(`${API_URL}/cart`, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+      
+      if (response.ok) {
+        const cartData = await response.json();
+        setCart(cartData);
+        
+        // ดึง product data สำหรับ cart items
+        if (cartData.items && cartData.items.length > 0) {
+          const productIds = cartData.items.map(item => item.product_id);
+          const uniqueIds = [...new Set(productIds)];
+          const missingIds = uniqueIds.filter(id => !productCache[id]);
+          
+          if (missingIds.length > 0) {
+            const productPromises = missingIds.map(id =>
+              fetch(`${API_URL}/products/${id}`).then(r => r.ok ? r.json() : null)
+            );
+            const products = await Promise.all(productPromises);
+            const newCache = { ...productCache };
+            products.forEach((product, index) => {
+              if (product) {
+                newCache[missingIds[index]] = product;
+              }
+            });
+            setProductCache(newCache);
+          }
+        }
+      } else if (response.status === 401) {
+        setCart(null);
+      }
+    } catch (err) {
+      console.error("Error fetching cart:", err);
+    } finally {
+      setCartLoading(false);
+    }
+  };
+
+  const addToCart = async (productId, qty = 1) => {
+    try {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        alert("กรุณาเข้าสู่ระบบก่อน");
+        return;
+      }
+      
+      const response = await fetch(`${API_URL}/cart/items`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          product_id: productId,
+          qty: qty,
+        }),
+      });
+      
+      if (response.ok || response.status === 201) {
+        await fetchCart();
+        alert("เพิ่มสินค้าลงตะกร้าเรียบร้อย");
+      } else {
+        // ลองอ่าน error message จาก response
+        let errorMessage = "ไม่สามารถเพิ่มสินค้าได้";
+        try {
+          const errorText = await response.text();
+          if (errorText) {
+            // ลอง parse เป็น JSON ก่อน
+            try {
+              const errorJson = JSON.parse(errorText);
+              errorMessage = errorJson.error || errorJson.message || errorText;
+            } catch {
+              // ถ้าไม่ใช่ JSON ใช้เป็น plain text
+              errorMessage = errorText;
+            }
+          }
+          
+          // แปล error message เป็นภาษาไทย
+          if (errorMessage.includes("unauthorized")) {
+            errorMessage = "กรุณาเข้าสู่ระบบก่อน";
+          } else if (errorMessage.includes("product not found")) {
+            errorMessage = "ไม่พบสินค้านี้";
+          } else if (errorMessage.includes("product inactive")) {
+            errorMessage = "สินค้านี้ไม่พร้อมขาย";
+          } else if (errorMessage.includes("insufficient stock")) {
+            errorMessage = "สินค้าในสต็อกไม่พอ";
+          } else if (errorMessage.includes("invalid body")) {
+            errorMessage = "ข้อมูลไม่ถูกต้อง";
+          }
+        } catch (e) {
+          console.error("Error reading error response:", e);
+        }
+        
+        console.error("Error adding to cart:", response.status, errorMessage);
+        alert(errorMessage);
+      }
+    } catch (err) {
+      console.error("Error adding to cart:", err);
+      alert("เกิดข้อผิดพลาดในการเพิ่มสินค้า: " + (err.message || "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้"));
+    }
+  };
+
+  const removeFromCart = async (itemId) => {
+    try {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        alert("กรุณาเข้าสู่ระบบ");
+        return;
+      }
+      
+      const response = await fetch(`${API_URL}/cart/items?id=${itemId}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      
+      if (response.ok || response.status === 204) {
+        await fetchCart();
+      } else {
+        const errorText = await response.text().catch(() => "เกิดข้อผิดพลาด");
+        console.error("Error removing from cart:", response.status, errorText);
+        alert(`ไม่สามารถลบสินค้าได้: ${errorText}`);
+      }
+    } catch (err) {
+      console.error("Error removing from cart:", err);
+      alert("เกิดข้อผิดพลาดในการลบสินค้า: " + err.message);
+    }
+  };
+
+  const clearCart = async () => {
+    if (!cart || !cart.items || cart.items.length === 0) return;
+    
+    if (confirm("ต้องการล้างตะกร้าทั้งหมดหรือไม่?")) {
+      try {
+        const token = localStorage.getItem("access_token");
+        if (!token) {
+          alert("กรุณาเข้าสู่ระบบ");
+          return;
+        }
+        
+        const deletePromises = cart.items.map(async (item) => {
+          const response = await fetch(`${API_URL}/cart/items?id=${item.id}`, {
+            method: "DELETE",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          });
+          
+          if (!response.ok && response.status !== 204) {
+            const errorText = await response.text().catch(() => "เกิดข้อผิดพลาด");
+            throw new Error(`Failed to delete item ${item.id}: ${errorText}`);
+          }
+          return response;
+        });
+        
+        await Promise.all(deletePromises);
+        await fetchCart();
+        alert("ล้างตะกร้าเรียบร้อยแล้ว");
+      } catch (err) {
+        console.error("Error clearing cart:", err);
+        alert("เกิดข้อผิดพลาดในการล้างตะกร้า: " + err.message);
+      }
+    }
+  };
 
   const fetchProducts = async () => {
     try {
@@ -211,74 +392,11 @@ export default function ProductPage() {
     setModalSuccess(false);
   };
 
-  // Fetch cart data
-  const fetchCart = async () => {
-    try {
-      const res = await fetch("http://localhost:8000/cart", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-      });
-      if (!res.ok) {
-        if (res.status === 401) {
-          router.push("/login");
-          return;
-        }
-        throw new Error(`Cart fetch failed: ${res.status}`);
-      }
-      const data = await res.json();
-      setCart(data);
-    } catch (error) {
-      console.error("Error fetching cart:", error);
-    }
-  };
-
-  // Load products and cart on mount
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      setErr(null);
-      try {
-        const res = await fetch("http://localhost:8000/products");
-        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-        const data = await res.json();
-        setProducts(data);
-        await fetchCart(); // Fetch cart after products
-      } catch (e) {
-        setErr(e.message);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, []);
-
-  // Clear cart function
-  const handleClearCart = async () => {
-    for (const item of cart.items) {
-      try {
-        await fetch(`http://localhost:8000/cart/items?id=${item.id}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          },
-        });
-      } catch (error) {
-        console.error("Error clearing item:", error);
-      }
-    }
-    await fetchCart(); // Refresh cart after clearing
-  };
-
-  // Calculate total
-  const cartTotal = cart.items.reduce((sum, item) => {
-    return sum + (item.unit_price * item.qty) / 100; // Convert cents to baht
-  }, 0);
 
   return (
     <main className="bg-gradient-to-b from-black to-[#1F1F1F] min-h-screen bg-[1d1d20]">
       <div className="relative gap-1 self-center justify-self-center top-0 w-[90%] mx-auto bg-neutral-600/30 backdrop-blur-sm rounded-[40px] backdrop-opacity-10 border-2 p-6">
-        <div className="w-[100%] flex justify-evenly justify-self-center h-full select-text">
+        <div className="w-[100%] flex justify-between gap-8 justify-self-center h-full select-text">
           {/* ========== ด้านซ้าย: Selection Filter ========== */}
           <div className="sticky flex flex-col top-0 order-1 ml-10 mt-15 h-fit w-[16%] font-[sans-serif]">
             <div className="pb-5 font-[sans-serif] text-xl font-[600] text-nowrap drop-shadow-2xl cursor-default text-white">
@@ -331,17 +449,49 @@ export default function ProductPage() {
           </div>
 
           {/* ========== ตรงกลาง: Product List ========== */}
-          <div className="flex flex-col order-2 mt-15 w-[62%] font-[sans-serif]">
+          <div className="flex flex-col order-2 mt-15 w-[62%] font-[sans-serif] ml-4">
             <div className="flex justify-between items-center mb-6">
               <div className="text-xl font-[600] text-nowrap drop-shadow-2xl cursor-default text-white">
                 Product
               </div>
-              <button
-                onClick={openModal}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition font-semibold text-sm"
-              >
-                + เพิ่มสินค้า
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={async () => {
+                    if (confirm("ต้องการเปลี่ยนสินค้าทั้งหมดเป็นสถานะพร้อมขายหรือไม่?")) {
+                      try {
+                        const response = await fetch(`${API_URL}/products`);
+                        if (response.ok) {
+                          const products = await response.json();
+                          const updatePromises = products.map(product =>
+                            fetch(`${API_URL}/products/${product.id}`, {
+                              method: "PATCH",
+                              headers: {
+                                "Content-Type": "application/json",
+                              },
+                              body: JSON.stringify({ status: "active" }),
+                            })
+                          );
+                          await Promise.all(updatePromises);
+                          alert("เปลี่ยนสถานะสินค้าทั้งหมดเป็นพร้อมขายเรียบร้อย");
+                          fetchProducts();
+                        }
+                      } catch (err) {
+                        console.error("Error updating products:", err);
+                        alert("เกิดข้อผิดพลาด");
+                      }
+                    }
+                  }}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition font-semibold text-sm"
+                >
+                  เปลี่ยนเป็นพร้อมขายทั้งหมด
+                </button>
+                <button
+                  onClick={openModal}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition font-semibold text-sm"
+                >
+                  + เพิ่มสินค้า
+                </button>
+              </div>
             </div>
 
             {loading ? (
@@ -372,96 +522,135 @@ export default function ProductPage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {products.map((product) => (
-                  <Link
+                  <div
                     key={product.id}
-                    href={`/product/${product.id}`}
-                    className="block bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:shadow-2xl transition-all hover:scale-105 cursor-pointer"
+                    className="bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:shadow-2xl transition-all"
                   >
-                    <div className="relative w-full h-48 bg-gray-700">
-                      <img
-                        src={getProductImage(product)}
-                        alt={product.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.src = "/placeholder-product.png";
-                        }}
-                      />
-                      {product.images && product.images.length > 1 && (
-                        <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
-                          {product.images.length} รูป
+                    <Link
+                      href={`/product/${product.id}`}
+                      className="block hover:scale-105 transition-transform"
+                    >
+                      <div className="relative w-full h-48 bg-gray-700">
+                        <img
+                          src={getProductImage(product)}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.src = "/placeholder-product.png";
+                          }}
+                        />
+                        {product.images && product.images.length > 1 && (
+                          <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+                            {product.images.length} รูป
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <div className="text-xs text-gray-400 mb-1">SKU: {product.sku}</div>
+                        <h3 className="text-white text-lg font-semibold mb-2 truncate">
+                          {product.name}
+                        </h3>
+                        <p className="text-gray-400 text-sm mb-3 line-clamp-2">
+                          {product.description || "ไม่มีคำอธิบาย"}
+                        </p>
+                        <div className="flex justify-between items-center mb-3">
+                          <span className="text-yellow-400 text-xl font-bold">
+                            ฿{product.price.toLocaleString()}
+                          </span>
+                          <span className="text-gray-500 text-sm">
+                            คงเหลือ: {product.stock}
+                          </span>
                         </div>
-                      )}
-                    </div>
-                    <div className="p-4">
-                      <div className="text-xs text-gray-400 mb-1">
-                        SKU: {product.sku}
                       </div>
-                      <h3 className="text-white text-lg font-semibold mb-2 truncate">
-                        {product.name}
-                      </h3>
-                      <p className="text-gray-400 text-sm mb-3 line-clamp-2">
-                        {product.description || "ไม่มีคำอธิบาย"}
-                      </p>
-                      <div className="flex justify-between items-center">
-                        <span className="text-yellow-400 text-xl font-bold">
-                          ฿{product.price.toLocaleString()}
-                        </span>
-                        <span className="text-gray-500 text-sm">
-                          คงเหลือ: {product.stock}
-                        </span>
+                    </Link>
+                    {product.status === "active" && product.stock > 0 && (
+                      <div className="px-4 pb-4">
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            addToCart(product.id, 1);
+                          }}
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition text-sm"
+                        >
+                          เพิ่มลงตะกร้า
+                        </button>
                       </div>
-                    </div>
-                  </Link>
+                    )}
+                  </div>
                 ))}
               </div>
             )}
           </div>
 
           {/* ========== ด้านขวา: Shopping Cart ========== */}
-          <div className="sticky top-0 mr-6 flex flex-col order-3 mt-15 h-fit w-[22%] font-[sans-serif]">
-            <div className="pb-5 font-[sans-serif] text-xl font-[600] text-nowrap drop-shadow-2xl cursor-default text-white">
+          <div className="sticky top-0 mr-6 flex flex-col order-3 mt-15 h-fit w-[22%] font-[sans-serif] max-h-[80vh] overflow-y-auto ml-8">
+            <div className="pb-5 font-[sans-serif] text-xl font-[600] text-nowrap drop-shadow-2xl cursor-default text-white mb-4">
               Shopping Cart
             </div>
-            <div className="w-48 active:text-[#0067D1] hover:underline underline-offset-2 font-[sans-serif] text-lg font-[400] text-nowrap drop-shadow-2xl text-white">
-              <a href="/checkout" rel="noopener noreferrer">
-                continue to checkout ≫
-              </a>
-            </div>
-            <button
-              onClick={handleClearCart}
-              className="hover:text-[#ec0000] active:text-[#0067D1] cursor-pointer text-neutral-400 grid place-self-end w-15 font-[sans-serif] text-md font-thin text-nowrap drop-shadow-xl"
-            >
-              clear all
-            </button>
-          </div>
-        </div>
-      </div>
-      {/* Cart Items */}
-      <div className="max-h-[60vh] overflow-y-auto">
-        {cart.items.map((item) => (
-          <div key={item.id} className="mb-4 p-3 bg-neutral-800/50 rounded-lg">
-            <div className="flex justify-between items-center">
-              <div className="flex-1">
-                <div className="font-semibold">
-                  {products.find((p) => p.ID === item.product_id)?.name ||
-                    "Product"}
+            
+            {cartLoading ? (
+              <div className="text-white text-center py-4">กำลังโหลด...</div>
+            ) : !cart || !cart.items || cart.items.length === 0 ? (
+              <div className="text-gray-400 text-sm py-4">ตะกร้าว่าง</div>
+            ) : (
+              <>
+                <div className="space-y-3 mb-4">
+                  {cart.items.map((item) => {
+                    const product = productCache[item.product_id];
+                    const price = (item.unit_price / 100).toFixed(2);
+                    return (
+                      <div key={item.id} className="bg-gray-700 rounded-lg p-3 shadow-md">
+                        <div className="flex justify-between items-start gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-white text-sm font-semibold truncate">
+                              {product?.name || `สินค้า #${item.product_id}`}
+                            </div>
+                            <div className="text-gray-400 text-xs mt-1">
+                              ฿{price} x {item.qty}
+                            </div>
+                            <div className="text-yellow-400 text-sm mt-1 font-semibold">
+                              ฿{((item.unit_price * item.qty) / 100).toFixed(2)}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => removeFromCart(item.id)}
+                            className="text-red-400 hover:text-red-600 text-xl ml-2 flex-shrink-0 w-6 h-6 flex items-center justify-center rounded hover:bg-red-900/20 transition"
+                            title="ลบ"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="text-sm text-neutral-400">
-                  Quantity: {item.qty} × ฿{(item.unit_price / 100).toFixed(2)}
+                
+                <div className="border-t border-gray-600 pt-4 mb-4">
+                  <div className="flex justify-between items-center text-white mb-2">
+                    <span className="text-lg font-semibold">รวมทั้งหมด:</span>
+                    <span className="text-yellow-400 font-bold text-lg">
+                      ฿{(cart.items.reduce((sum, item) => sum + (item.unit_price * item.qty), 0) / 100).toFixed(2)}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <div className="font-bold">
-                ฿{((item.unit_price * item.qty) / 100).toFixed(2)}
-              </div>
-            </div>
+                
+                <div className="w-full mb-3">
+                  <Link
+                    href="/checkout"
+                    className="block active:text-[#0067D1] hover:underline underline-offset-2 font-[sans-serif] text-base font-[500] text-nowrap drop-shadow-2xl text-white text-center bg-blue-600 hover:bg-blue-700 py-2.5 px-4 rounded-lg transition"
+                  >
+                    ไปชำระเงิน ≫
+                  </Link>
+                </div>
+                <button
+                  onClick={clearCart}
+                  className="hover:text-[#ec0000] active:text-[#0067D1] cursor-pointer text-neutral-400 grid place-self-end w-15 font-[sans-serif] text-md font-thin text-nowrap drop-shadow-xl"
+                >
+                  clear all
+                </button>
+              </>
+            )}
           </div>
-        ))}
-      </div>
-      {/* Cart Total */}
-      <div className="mt-4 pb-4 border-t border-neutral-700 pt-4">
-        <div className="flex justify-between items-center font-semibold">
-          <span>Total:</span>
-          <span>฿{cartTotal.toFixed(2)}</span>
         </div>
       </div>
       {/* Modal สำหรับเพิ่มสินค้า */}
@@ -583,15 +772,13 @@ export default function ProductPage() {
                     <label className="block text-white mb-1 text-sm font-semibold">
                       สถานะ
                     </label>
-                    <select
-                      name="status"
-                      value={formData.status}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
-                    >
-                      <option value="active">พร้อมขาย</option>
-                      <option value="inactive">ไม่พร้อมขาย</option>
-                    </select>
+                    <input
+                      type="text"
+                      value="พร้อมขาย"
+                      disabled
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm opacity-60 cursor-not-allowed"
+                    />
+                    <input type="hidden" name="status" value="active" />
                   </div>
                 </div>
 

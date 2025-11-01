@@ -1,6 +1,6 @@
 "use client";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 
 export default function PageNav() {
@@ -20,89 +20,100 @@ export default function PageNav() {
     "/edit_acc",
   ];
 
-  const handleLogout = async () => {
+  //logout
+  const logout = useCallback(async () => {
     try {
-      const refreshToken = localStorage.getItem("refreshToken");
-      if (!refreshToken) {
-        // If no refresh token, just clear local storage and redirect
-        logout();
-        return;
-      }
-
-      const url = "http://localhost:8000/auth/logout";
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ refresh_token: refreshToken }),
-        mode: "cors",
-      });
-
-      if (!res.ok) {
-        console.error("Logout failed:", res.status);
+      const refreshToken = localStorage.getItem("refresh_token");
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      
+      // เรียก API logout เพื่อ revoke refresh token (optional)
+      if (refreshToken) {
+        try {
+          await fetch(`${API_URL}/auth/logout`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ refresh_token: refreshToken }),
+          });
+        } catch (err) {
+          console.error("Logout API call failed:", err);
+          // Continue with local logout even if API fails
+        }
       }
     } catch (err) {
-      console.error("Logout request failed:", err);
+      console.error("Logout error:", err);
     } finally {
-      // Always clear local storage and redirect
-      logout();
+      // ล้างข้อมูลใน localStorage
+      localStorage.removeItem("loggedIn");
+      localStorage.removeItem("loggedInExpires");
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      localStorage.removeItem("authToken"); // remove old token key
+      localStorage.removeItem("user");
+      
+      setLoggedIn(false);
+      setOpenMenu(false);
+      
+      // รีเฟรชหน้าและ redirect
+      router.push("/");
+      router.refresh();
     }
-  };
+  }, [router]);
 
-  //logout things
-  const logout = () => {
-    localStorage.removeItem("loggedIn");
-    localStorage.removeItem("loggedInExpires");
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("refreshToken");
-    setLoggedIn(false);
-    setOpenMenu(false);
-    router.push("/");
-  };
+  const handleLogout = logout;
 
   useEffect(() => {
-    const token = localStorage.getItem("loggedIn");
-    setLoggedIn(token === "true");
-  }, []);
-
-  useEffect(() => {
-    // validate stored login + expiry
-    const check = () => {
+    const checkLogin = () => {
       const token = localStorage.getItem("loggedIn");
+      const accessToken = localStorage.getItem("access_token");
       const expires = parseInt(
         localStorage.getItem("loggedInExpires") || "0",
         10
       );
-      if (token === "true" && expires && Date.now() < expires) {
+      
+      // เช็คว่า logged in และยังไม่หมดอายุ และมี access_token
+      if (token === "true" && accessToken && expires && Date.now() < expires) {
         setLoggedIn(true);
-        // set timeout to auto-logout when expired
-        const remaining = expires - Date.now();
-        if (remaining > 0) {
-          const tid = setTimeout(() => {
-            logout();
-          }, remaining);
-          return () => clearTimeout(tid);
-        }
-        return;
+      } else {
+        // expired or not logged
+        localStorage.removeItem("loggedIn");
+        localStorage.removeItem("loggedInExpires");
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        setLoggedIn(false);
       }
-      // expired or not logged
-      localStorage.removeItem("loggedIn");
-      localStorage.removeItem("loggedInExpires");
-      setLoggedIn(false);
     };
 
-    const cleanup = check();
+    // เช็คตอนแรก
+    checkLogin();
+    
     // also listen storage event (tabs)
     const onStorage = (e) => {
-      if (e.key === "loggedIn" || e.key === "loggedInExpires") check();
+      if (e.key === "loggedIn" || e.key === "loggedInExpires" || e.key === "access_token") {
+        checkLogin();
+      }
     };
     window.addEventListener("storage", onStorage);
+    
+    // เช็ค auto-logout เมื่อหมดอายุ
+    const token = localStorage.getItem("loggedIn");
+    const expires = parseInt(localStorage.getItem("loggedInExpires") || "0", 10);
+    let timeoutId = null;
+    if (token === "true" && expires && Date.now() < expires) {
+      const remaining = expires - Date.now();
+      if (remaining > 0 && remaining < 60 * 60 * 1000) { // ถ้าเหลือเวลาน้อยกว่า 1 ชั่วโมง
+        timeoutId = setTimeout(() => {
+          logout();
+        }, remaining);
+      }
+    }
+    
     return () => {
-      if (typeof cleanup === "function") cleanup();
+      if (timeoutId) clearTimeout(timeoutId);
       window.removeEventListener("storage", onStorage);
     };
-  }, []);
+  }, [pathname, logout]); // Added logout to dependencies
 
   useEffect(() => {
     const handleClickOutside = (e) => {

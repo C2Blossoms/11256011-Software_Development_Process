@@ -12,6 +12,7 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [addingToCart, setAddingToCart] = useState(false);
 
   useEffect(() => {
     if (params.id) {
@@ -52,6 +53,77 @@ export default function ProductDetailPage() {
       return `${API_URL}${imageUrl}`;
     }
     return imageUrl;
+  };
+
+  const addToCart = async () => {
+    if (!product || product.stock === 0 || product.status !== "active") {
+      return;
+    }
+
+    try {
+      setAddingToCart(true);
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        alert("กรุณาเข้าสู่ระบบก่อน");
+        router.push("/login");
+        return;
+      }
+      
+      const response = await fetch(`${API_URL}/cart/items`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          product_id: product.id,
+          qty: 1,
+        }),
+      });
+      
+      if (response.ok || response.status === 201) {
+        alert("เพิ่มสินค้าลงตะกร้าเรียบร้อย");
+      } else {
+        // ลองอ่าน error message จาก response
+        let errorMessage = "ไม่สามารถเพิ่มสินค้าได้";
+        try {
+          const errorText = await response.text();
+          if (errorText) {
+            // ลอง parse เป็น JSON ก่อน
+            try {
+              const errorJson = JSON.parse(errorText);
+              errorMessage = errorJson.error || errorJson.message || errorText;
+            } catch {
+              // ถ้าไม่ใช่ JSON ใช้เป็น plain text
+              errorMessage = errorText;
+            }
+          }
+          
+          // แปล error message เป็นภาษาไทย
+          if (errorMessage.includes("unauthorized")) {
+            errorMessage = "กรุณาเข้าสู่ระบบก่อน";
+          } else if (errorMessage.includes("product not found")) {
+            errorMessage = "ไม่พบสินค้านี้";
+          } else if (errorMessage.includes("product inactive")) {
+            errorMessage = "สินค้านี้ไม่พร้อมขาย";
+          } else if (errorMessage.includes("insufficient stock")) {
+            errorMessage = "สินค้าในสต็อกไม่พอ";
+          } else if (errorMessage.includes("invalid body")) {
+            errorMessage = "ข้อมูลไม่ถูกต้อง";
+          }
+        } catch (e) {
+          console.error("Error reading error response:", e);
+        }
+        
+        console.error("Error adding to cart:", response.status, errorMessage);
+        alert(errorMessage);
+      }
+    } catch (err) {
+      console.error("Error adding to cart:", err);
+      alert("เกิดข้อผิดพลาดในการเพิ่มสินค้า: " + (err.message || "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้"));
+    } finally {
+      setAddingToCart(false);
+    }
   };
 
   if (loading) {
@@ -188,14 +260,8 @@ export default function ProductDetailPage() {
                 <div className="flex items-center gap-4 text-sm">
                   <div>
                     <span className="text-gray-400">สถานะ:</span>{" "}
-                    <span
-                      className={`font-semibold ${
-                        product.status === "active"
-                          ? "text-green-400"
-                          : "text-red-400"
-                      }`}
-                    >
-                      {product.status === "active" ? "พร้อมขาย" : "ไม่พร้อมขาย"}
+                    <span className="font-semibold text-green-400">
+                      พร้อมขาย
                     </span>
                   </div>
                   <div>
@@ -224,13 +290,14 @@ export default function ProductDetailPage() {
 
               <div className="flex gap-4">
                 <button
+                  onClick={addToCart}
+                  disabled={product.stock === 0 || addingToCart}
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition disabled:bg-gray-600 disabled:cursor-not-allowed"
-                  disabled={product.stock === 0 || product.status !== "active"}
                 >
-                  {product.stock === 0
+                  {addingToCart
+                    ? "กำลังเพิ่ม..."
+                    : product.stock === 0
                     ? "สินค้าหมด"
-                    : product.status !== "active"
-                    ? "ไม่พร้อมขาย"
                     : "เพิ่มลงตะกร้า"}
                 </button>
                 <button className="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-6 rounded-lg transition">
