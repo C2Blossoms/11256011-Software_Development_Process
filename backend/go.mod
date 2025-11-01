@@ -11,7 +11,7 @@ require (
 	gorm.io/gorm v1.30.1
 )
 
-require github.com/rs/cors v1.11.1 // indirect
+require github.com/rs/cors v1.11.1
 
 require (
 	cloud.google.com/go/compute/metadata v0.8.0 // indirect
