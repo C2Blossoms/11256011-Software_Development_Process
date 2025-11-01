@@ -1,10 +1,25 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import "swiper/css";
 import "swiper/css/mousewheel";
 import "swiper/css/pagination";
 
 export default function ProductPage() {
+  // 🟢 สร้าง state สำหรับเก็บข้อมูลสินค้า
+  const [products, setProducts] = useState([]);
+
+  // 🟢 ดึงข้อมูลจาก backend ตอนหน้าโหลด
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`)
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("Fetched products:", data); // ดูผลลัพธ์ใน console
+        setProducts(data);
+      })
+      .catch((err) => console.error("Error fetching products:", err));
+  }, []);
+  
   return (
     <main className="bg-gradient-to-b from-black to-[#1F1F1F] min-h-screen bg-[1d1d20]">
       <div className="relative gap-1 self-center justify-self-center top-0 w-[90%] bg-neutral-600/30 backdrop-blur-s m rounded-[40px] backdrop-opacity-10 border-2">
