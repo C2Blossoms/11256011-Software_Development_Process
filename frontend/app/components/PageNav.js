@@ -20,47 +20,6 @@ export default function PageNav() {
     "/edit_acc",
   ];
 
-  const handleLogout = async () => {
-    try {
-      const refreshToken = localStorage.getItem("refreshToken");
-      if (!refreshToken) {
-        // If no refresh token, just clear local storage and redirect
-        logout();
-        return;
-      }
-
-      const url = "http://localhost:8000/auth/logout";
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ refresh_token: refreshToken }),
-        mode: "cors",
-      });
-
-      if (!res.ok) {
-        console.error("Logout failed:", res.status);
-      }
-    } catch (err) {
-      console.error("Logout request failed:", err);
-    } finally {
-      // Always clear local storage and redirect
-      logout();
-    }
-  };
-
-  //logout
-  const logout = () => {
-    localStorage.removeItem("loggedIn");
-    localStorage.removeItem("loggedInExpires");
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("refreshToken"); // Add this line
-    setLoggedIn(false);
-    setOpenMenu(false);
-    router.push("/");
-  };
-
   useEffect(() => {
     const token = localStorage.getItem("loggedIn");
     setLoggedIn(token === "true");
