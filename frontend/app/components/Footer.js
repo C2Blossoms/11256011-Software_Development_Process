@@ -1,5 +1,7 @@
 "use client";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
+
 export default function Footer() {
   const pathname = usePathname();
   if (pathname === "/") return null;
@@ -11,12 +13,12 @@ export default function Footer() {
         <div className="space-y-4">
           <h2 className="text-xl font-bold text-white">Quick Links</h2>
           <ul className="text-sm grid grid-cols-2 gap-x-1 gap-y-2">
-            <li><a href="/" className="hover:text-gray-200">Home</a></li>
-            <li><a href="/product" className="hover:text-gray-200">Dumbbell</a></li>
-            <li><a href="/login" className="hover:text-gray-200">Login</a></li>
-            <li><a href="/product" className="hover:text-gray-200">Whey Protein</a></li>
-            <li><a href="/privacy_policy" className="hover:text-gray-200">Privacy Policy</a></li>
-            <li><a href="/product" className="hover:text-gray-200">Treadmill</a></li>
+            <li><Link href="/" className="hover:text-gray-200">Home</Link></li>
+            <li><Link href="/product?category=DUMBBELLS" className="hover:text-gray-200">Dumbbell</Link></li>
+            <li><Link href="/login" className="hover:text-gray-200">Login</Link></li>
+            <li><Link href="/product?category=WHEY%20PROTEIN" className="hover:text-gray-200">Whey Protein</Link></li>
+            <li><Link href="/privacy_policy" className="hover:text-gray-200">Privacy Policy</Link></li>
+            <li><Link href="/product?category=TREADMILLS" className="hover:text-gray-200">Treadmill</Link></li>
           </ul>
         </div>
 

@@ -464,7 +464,7 @@ export default function AdminPage() {
           </div>
           <button
             onClick={openAddModal}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg transition font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-105"
+            className="bg-gray-600 hover:bg-gray-700 text-white px-8 py-4 rounded-lg transition font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-105"
           >
             + Add New Product
           </button>
@@ -476,7 +476,7 @@ export default function AdminPage() {
             <div className="text-base mb-6">{error}</div>
             <button
               onClick={fetchProducts}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition"
+              className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition"
             >
               Try Again
             </button>
@@ -486,7 +486,7 @@ export default function AdminPage() {
             <div className="text-xl mb-3 font-semibold">No products found</div>
             <button
               onClick={openAddModal}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold mt-4 shadow-lg hover:shadow-xl transition"
+              className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-semibold mt-4 shadow-lg hover:shadow-xl transition"
             >
               Add First Product
             </button>
@@ -551,13 +551,13 @@ export default function AdminPage() {
                         <div className="flex gap-3">
                           <button
                             onClick={() => openEditModal(product)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition shadow-md hover:shadow-lg"
+                            className="bg-gray-600 hover:bg-gray-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition shadow-md hover:shadow-lg"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleDelete(product.id)}
-                            className="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition shadow-md hover:shadow-lg"
+                            className="bg-gray-600 hover:bg-gray-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition shadow-md hover:shadow-lg"
                           >
                             Delete
                           </button>
@@ -709,7 +709,7 @@ export default function AdminPage() {
                     multiple
                     onChange={handleImageChange}
                     disabled={uploadingImages.length > 0}
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 file:cursor-pointer"
+                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-gray-600 file:text-white hover:file:bg-gray-700 file:cursor-pointer"
                   />
                   {uploadingImages.length > 0 && (
                     <p className="mt-3 text-yellow-400 text-sm">
@@ -729,7 +729,7 @@ export default function AdminPage() {
                           <button
                             type="button"
                             onClick={() => removeImage(index)}
-                            className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm shadow-lg opacity-0 group-hover:opacity-100 transition"
+                            className="absolute top-2 right-2 bg-gray-600 hover:bg-gray-700 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm shadow-lg opacity-0 group-hover:opacity-100 transition"
                           >
                             ×
                           </button>
@@ -748,7 +748,7 @@ export default function AdminPage() {
                   <button
                     type="submit"
                     disabled={modalLoading}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition text-base shadow-lg hover:shadow-xl"
+                    className="flex-1 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition text-base shadow-lg hover:shadow-xl"
                   >
                     {modalLoading ? "Saving..." : "Save Product"}
                   </button>
@@ -804,7 +804,7 @@ export default function AdminPage() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="block text-white text-base font-semibold">
+                    <label className="block text-gray-200 text-base font-semibold">
                       SKU <span className="text-red-400">*</span>
                     </label>
                     <input
@@ -813,13 +813,13 @@ export default function AdminPage() {
                       value={formData.sku}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                      className="w-full px-4 py-3 bg-gray-900/50 border-2 border-gray-500 rounded-lg text-gray-100 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                       placeholder="e.g. PROD001"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-white text-base font-semibold">
+                    <label className="block text-gray-200 text-base font-semibold">
                       Product Name <span className="text-red-400">*</span>
                     </label>
                     <input
@@ -828,14 +828,14 @@ export default function AdminPage() {
                       value={formData.name}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                      className="w-full px-4 py-3 bg-gray-900/50 border-2 border-gray-500 rounded-lg text-gray-100 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                       placeholder="e.g. Dumbbell 5kg"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-white text-base font-semibold">
+                  <label className="block text-gray-200 text-base font-semibold">
                     Description
                   </label>
                   <textarea
@@ -843,14 +843,14 @@ export default function AdminPage() {
                     value={formData.description}
                     onChange={handleInputChange}
                     rows={4}
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none"
+                    className="w-full px-4 py-3 bg-gray-900/50 border-2 border-gray-500 rounded-lg text-gray-100 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition resize-none"
                     placeholder="Product details..."
                   />
                 </div>
 
                 <div className="grid grid-cols-3 gap-6">
                   <div className="space-y-2">
-                    <label className="block text-white text-base font-semibold">
+                    <label className="block text-gray-200 text-base font-semibold">
                       Price (฿) <span className="text-red-400">*</span>
                     </label>
                     <input
@@ -861,12 +861,12 @@ export default function AdminPage() {
                       required
                       min="0"
                       step="0.01"
-                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                      className="w-full px-4 py-3 bg-gray-900/50 border-2 border-gray-500 rounded-lg text-gray-100 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                       placeholder="0.00"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="block text-white text-base font-semibold">
+                    <label className="block text-gray-200 text-base font-semibold">
                       Stock <span className="text-red-400">*</span>
                     </label>
                     <input
@@ -876,19 +876,19 @@ export default function AdminPage() {
                       onChange={handleInputChange}
                       required
                       min="0"
-                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                      className="w-full px-4 py-3 bg-gray-900/50 border-2 border-gray-500 rounded-lg text-gray-100 text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                       placeholder="0"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="block text-white text-base font-semibold">
+                    <label className="block text-gray-200 text-base font-semibold">
                       Status
                     </label>
                     <input
                       type="text"
                       value="Active"
                       disabled
-                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white text-base opacity-60 cursor-not-allowed"
+                      className="w-full px-4 py-3 bg-gray-700/50 border-2 border-gray-600 rounded-lg text-gray-400 text-base opacity-70 cursor-not-allowed"
                     />
                     <input type="hidden" name="status" value="active" />
                   </div>
@@ -898,7 +898,7 @@ export default function AdminPage() {
                   <button
                     type="submit"
                     disabled={modalLoading}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition text-base shadow-lg hover:shadow-xl"
+                    className="flex-1 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition text-base shadow-lg hover:shadow-xl"
                   >
                     {modalLoading ? "Saving..." : "Save Changes"}
                   </button>
