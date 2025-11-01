@@ -101,8 +101,8 @@ func main() {
 	mux.Handle("GET /orders/me", authMw.RequireAuth(http.HandlerFunc(ordH.ListMyOrders)))
 
 	// Payments (mock)
-	mux.Handle("POST /payments/intent", authMw.RequireAuth(http.HandlerFunc(payH.CreateIntent)))
-	mux.Handle("POST /payments/mock/mark-paid", http.HandlerFunc(payH.MarkPaidMock)) // dev only
+	mux.Handle("/payments/intent", authMw.RequireAuth(http.HandlerFunc(payH.CreateIntent)))
+	mux.Handle("/payments/mock/mark-paid", http.HandlerFunc(payH.MarkPaidMock)) // dev only
 
 	// Products - ต้องวาง route ที่เฉพาะเจาะจงก่อน route ทั่วไป
 	mux.HandleFunc("POST /products/upload-image", productDeps.UploadProductImage)

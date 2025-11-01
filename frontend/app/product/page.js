@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -9,13 +10,16 @@ export default function ProductPage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+  const [cart, setCart] = useState({ items: [] });
+  const [err, setErr] = useState(null);
+  const router = useRouter();
+
   // Modal states
   const [showModal, setShowModal] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState(null);
   const [modalSuccess, setModalSuccess] = useState(false);
-  
+
   // Form data
   const [formData, setFormData] = useState({
     sku: "",
@@ -25,7 +29,7 @@ export default function ProductPage() {
     stock: "",
     status: "active",
   });
-  
+
   const [images, setImages] = useState([]);
   const [uploadingImages, setUploadingImages] = useState([]);
 
@@ -38,13 +42,13 @@ export default function ProductPage() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await fetch(`${API_URL}/products`);
-      
+
       if (!response.ok) {
         throw new Error(`ไม่สามารถดึงข้อมูลสินค้าได้ (${response.status})`);
       }
-      
+
       const data = await response.json();
       setProducts(data || []);
     } catch (err) {
@@ -129,7 +133,12 @@ export default function ProductPage() {
     setModalSuccess(false);
 
     try {
-      if (!formData.sku || !formData.name || !formData.price || !formData.stock) {
+      if (
+        !formData.sku ||
+        !formData.name ||
+        !formData.price ||
+        !formData.stock
+      ) {
         throw new Error("กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน");
       }
 
@@ -156,7 +165,7 @@ export default function ProductPage() {
       }
 
       setModalSuccess(true);
-      
+
       setFormData({
         sku: "",
         name: "",
@@ -201,6 +210,70 @@ export default function ProductPage() {
     setModalError(null);
     setModalSuccess(false);
   };
+
+  // Fetch cart data
+  const fetchCart = async () => {
+    try {
+      const res = await fetch("http://localhost:8000/cart", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+      });
+      if (!res.ok) {
+        if (res.status === 401) {
+          router.push("/login");
+          return;
+        }
+        throw new Error(`Cart fetch failed: ${res.status}`);
+      }
+      const data = await res.json();
+      setCart(data);
+    } catch (error) {
+      console.error("Error fetching cart:", error);
+    }
+  };
+
+  // Load products and cart on mount
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      setErr(null);
+      try {
+        const res = await fetch("http://localhost:8000/products");
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        const data = await res.json();
+        setProducts(data);
+        await fetchCart(); // Fetch cart after products
+      } catch (e) {
+        setErr(e.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  // Clear cart function
+  const handleClearCart = async () => {
+    for (const item of cart.items) {
+      try {
+        await fetch(`http://localhost:8000/cart/items?id=${item.id}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        });
+      } catch (error) {
+        console.error("Error clearing item:", error);
+      }
+    }
+    await fetchCart(); // Refresh cart after clearing
+  };
+
+  // Calculate total
+  const cartTotal = cart.items.reduce((sum, item) => {
+    return sum + (item.unit_price * item.qty) / 100; // Convert cents to baht
+  }, 0);
 
   return (
     <main className="bg-gradient-to-b from-black to-[#1F1F1F] min-h-screen bg-[1d1d20]">
@@ -279,7 +352,7 @@ export default function ProductPage() {
               <div className="text-red-400 text-center py-20">
                 <div className="text-xl mb-2">⚠️ เกิดข้อผิดพลาด</div>
                 <div className="text-sm mb-4">{error}</div>
-                <button 
+                <button
                   onClick={fetchProducts}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
                 >
@@ -289,7 +362,7 @@ export default function ProductPage() {
             ) : products.length === 0 ? (
               <div className="text-white text-center py-20">
                 <div className="text-xl mb-2">ไม่มีสินค้าในระบบ</div>
-                <button 
+                <button
                   onClick={openModal}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded mt-4"
                 >
@@ -320,7 +393,9 @@ export default function ProductPage() {
                       )}
                     </div>
                     <div className="p-4">
-                      <div className="text-xs text-gray-400 mb-1">SKU: {product.sku}</div>
+                      <div className="text-xs text-gray-400 mb-1">
+                        SKU: {product.sku}
+                      </div>
                       <h3 className="text-white text-lg font-semibold mb-2 truncate">
                         {product.name}
                       </h3>
@@ -352,20 +427,58 @@ export default function ProductPage() {
                 continue to checkout ≫
               </a>
             </div>
-            <button className="hover:text-[#ec0000] active:text-[#0067D1] cursor-pointer text-neutral-400 grid place-self-end w-15 font-[sans-serif] text-md font-thin text-nowrap drop-shadow-xl">
+            <button
+              onClick={handleClearCart}
+              className="hover:text-[#ec0000] active:text-[#0067D1] cursor-pointer text-neutral-400 grid place-self-end w-15 font-[sans-serif] text-md font-thin text-nowrap drop-shadow-xl"
+            >
               clear all
             </button>
           </div>
         </div>
       </div>
-
+      {/* Cart Items */}
+      <div className="max-h-[60vh] overflow-y-auto">
+        {cart.items.map((item) => (
+          <div key={item.id} className="mb-4 p-3 bg-neutral-800/50 rounded-lg">
+            <div className="flex justify-between items-center">
+              <div className="flex-1">
+                <div className="font-semibold">
+                  {products.find((p) => p.ID === item.product_id)?.name ||
+                    "Product"}
+                </div>
+                <div className="text-sm text-neutral-400">
+                  Quantity: {item.qty} × ฿{(item.unit_price / 100).toFixed(2)}
+                </div>
+              </div>
+              <div className="font-bold">
+                ฿{((item.unit_price * item.qty) / 100).toFixed(2)}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Cart Total */}
+      <div className="mt-4 pb-4 border-t border-neutral-700 pt-4">
+        <div className="flex justify-between items-center font-semibold">
+          <span>Total:</span>
+          <span>฿{cartTotal.toFixed(2)}</span>
+        </div>
+      </div>
       {/* Modal สำหรับเพิ่มสินค้า */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4" onClick={closeModal}>
-          <div className="bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          onClick={closeModal}
+        >
+          <div
+            className="bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold text-white">เพิ่มสินค้าใหม่</h2>
+                <h2 className="text-2xl font-bold text-white">
+                  เพิ่มสินค้าใหม่
+                </h2>
                 <button
                   onClick={closeModal}
                   className="text-gray-400 hover:text-white text-3xl leading-none"

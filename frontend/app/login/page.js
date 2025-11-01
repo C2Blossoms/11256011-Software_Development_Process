@@ -14,7 +14,29 @@ function LoginForm() {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const SESSION_TTL_MS = 30 * 60 * 1000;
+  const refreshAccessToken = async (refreshToken) => {
+    try {
+      const res = await fetch("http://localhost:8000/auth/refresh", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Refresh failed");
+      }
+
+      const data = await res.json();
+      localStorage.setItem("authToken", data.access_token);
+      localStorage.setItem("refreshToken", data.refresh_token);
+      return true;
+    } catch (err) {
+      console.error("Token refresh failed:", err);
+      return false;
+    }
+  };
 
   const validate = () => {
     if (!email) {
@@ -76,12 +98,14 @@ function LoginForm() {
         return;
       }
 
-      const expiry = Date.now() + SESSION_TTL_MS;
+      // Store tokens instead of session TTL
       localStorage.setItem("loggedIn", "true");
-      localStorage.setItem("loggedInExpires", String(expiry));
+      localStorage.setItem("authToken", data.access_token);
+      localStorage.setItem("refreshToken", data.refresh_token);
 
-      if (data?.token) {
-        localStorage.setItem("authToken", data.token);
+      // Store user info if needed
+      if (data.user) {
+        localStorage.setItem("user", JSON.stringify(data.user));
       }
 
       setSuccess("Login successful");
@@ -93,7 +117,6 @@ function LoginForm() {
       setLoading(false);
     }
   };
-
   return (
     <form
       onSubmit={handleLogin}

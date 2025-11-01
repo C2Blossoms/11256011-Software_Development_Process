@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -161,15 +162,26 @@ export default function CheckoutPage() {
             {error && <div className="text-red-500 mt-2">{error}</div>}
           </div>
 
-          <button
-            onClick={() => {
-              // if you want to go straight to payment without place order:
-              toPayButton();
-            }}
+          {/* <button
+            onClick={toPayButton}
             className="flex justify-center items-center w-70 h-13 bg-[#0067D1] rounded-xl text-xl font-[600] cursor-pointer hover:bg-[#0040a1] active:border-3 border-[#0079e3]"
           >
             Continute to payment ≫
+          </button> */}
+
+          <button
+            onClick={handleCheckout}
+            disabled={loading}
+            className="..." // Add your styling
+          >
+            {loading ? "Processing..." : "Proceed to Payment"}
           </button>
+
+          {error && (
+            <div className="absolute bottom-4 left-4 bg-red-500/10 border border-red-500 text-red-500 px-4 py-2 rounded">
+              {error}
+            </div>
+          )}
         </div>
       </div>
     </main>
