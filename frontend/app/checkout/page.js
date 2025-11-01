@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -13,6 +12,41 @@ export default function CheckoutPage() {
   const [note, setNote] = useState("");
   const [error, setError] = useState(null);
   const [placing, setPlacing] = useState(false);
+
+  const handleCheckout = async (e) => {
+    e.preventDefault(); // Add this to prevent form submission
+    setLoading(true);
+    setError("");
+
+    try {
+      // Create payment intent
+      const createIntent = await fetch(
+        "http://localhost:8000/payments/intent",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+          body: JSON.stringify({
+            order_id: "YOUR_ORDER_ID", // Get this from your cart/order state
+          }),
+        }
+      );
+
+      if (!createIntent.ok) {
+        throw new Error("Failed to create payment");
+      }
+
+      const { intent_id, order_id } = await createIntent.json();
+      router.push(`/payment?order_id=${order_id}&intent_id=${intent_id}`);
+    } catch (err) {
+      console.error("Checkout failed:", err);
+      setError(err.message || "Failed to process checkout");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     async function loadCart() {
@@ -196,7 +230,7 @@ export default function CheckoutPage() {
           <button
             onClick={handleCheckout}
             disabled={loading}
-            className="..." // Add your styling
+            className="r-2" // Add your styling
           >
             {loading ? "Processing..." : "Proceed to Payment"}
           </button>
