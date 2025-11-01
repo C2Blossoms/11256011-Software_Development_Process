@@ -3,9 +3,14 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/C2Blossoms/Project_SDP/backend/models"
 	"gorm.io/gorm"
@@ -33,7 +38,7 @@ func (h *ProductDeps) GetProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var p models.Product
-	if err := h.DB.First(&p, id).Error; err != nil {
+	if err := h.DB.Preload("Images").First(&p, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			http.NotFound(w, r)
 			return
@@ -70,7 +75,7 @@ func (h *ProductDeps) ListProducts(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := q.Limit(limit).Order("id DESC").Find(&items).Error; err != nil {
+	if err := q.Preload("Images").Limit(limit).Order("id DESC").Find(&items).Error; err != nil {
 		http.Error(w, "db error", http.StatusInternalServerError)
 		return
 	}
@@ -80,12 +85,13 @@ func (h *ProductDeps) ListProducts(w http.ResponseWriter, r *http.Request) {
 // Post
 func (h *ProductDeps) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	var in struct {
-		SKU         string  `json:"sku"`
-		Name        string  `json:"name"`
-		Description string  `json:"description"`
-		Price       float64 `json:"price"`
-		Stock       int     `json:"stock"`
-		Status      string  `json:"status"` // default: active
+		SKU         string   `json:"sku"`
+		Name        string   `json:"name"`
+		Description string   `json:"description"`
+		Price       float64  `json:"price"`
+		Stock       int      `json:"stock"`
+		Status      string   `json:"status"` // default: active
+		ImageURLs   []string `json:"image_urls"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		http.Error(w, "bad json", http.StatusBadRequest)
@@ -108,6 +114,22 @@ func (h *ProductDeps) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "db error", http.StatusInternalServerError)
 		return
 	}
+
+	// เพิ่มรูปภาพถ้ามี
+	if len(in.ImageURLs) > 0 {
+		for i, imgURL := range in.ImageURLs {
+			img := models.ProductImage{
+				ProductID: p.ID,
+				ImageURL:  imgURL,
+				IsPrimary: i == 0, // รูปแรกเป็น primary
+			}
+			_ = h.DB.Create(&img).Error
+		}
+		// Reload product with images
+		_ = h.DB.Preload("Images").First(&p, p.ID).Error
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(p)
 }
 
@@ -219,4 +241,112 @@ func (h *ProductDeps) RestoreProduct(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(p)
+}
+
+// Upload Product Image
+func (h *ProductDeps) UploadProductImage(w http.ResponseWriter, r *http.Request) {
+	r.ParseMultipartForm(10 << 20) // Limit file size to 10MB
+
+	file, handler, err := r.FormFile("image")
+	if err != nil {
+		http.Error(w, "Error retrieving the file", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	ext := filepath.Ext(handler.Filename)
+	allowedExts := []string{".jpg", ".jpeg", ".png", ".gif", ".webp"}
+	allowed := false
+	for _, e := range allowedExts {
+		if strings.EqualFold(ext, e) {
+			allowed = true
+			break
+		}
+	}
+	if !allowed {
+		http.Error(w, "Invalid file type. Allowed: jpg, jpeg, png, gif, webp", http.StatusBadRequest)
+		return
+	}
+
+	timestamp := time.Now().Unix()
+	newFilename := fmt.Sprintf("%d_%s", timestamp, handler.Filename)
+
+	uploadDir := os.Getenv("UPLOAD_DIR")
+	if uploadDir == "" {
+		uploadDir = "./uploads"
+	}
+
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		http.Error(w, "Error creating upload directory", http.StatusInternalServerError)
+		return
+	}
+
+	filePath := filepath.Join(uploadDir, newFilename)
+
+	dst, err := os.Create(filePath)
+	if err != nil {
+		http.Error(w, "Error creating file", http.StatusInternalServerError)
+		return
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, file); err != nil {
+		http.Error(w, "Error saving file", http.StatusInternalServerError)
+		return
+	}
+
+	imageURL := fmt.Sprintf("/uploads/%s", newFilename)
+	response := map[string]string{
+		"image_url": imageURL,
+		"filename":  newFilename,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(response)
+}
+
+// Add Product Image (for existing product)
+func (h *ProductDeps) AddProductImage(w http.ResponseWriter, r *http.Request) {
+	productID, err := idFromPath(r)
+	if err != nil {
+		http.Error(w, "Invalid product ID", http.StatusBadRequest)
+		return
+	}
+
+	var in struct {
+		ImageURL  string `json:"image_url"`
+		IsPrimary bool   `json:"is_primary"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		http.Error(w, "bad json", http.StatusBadRequest)
+		return
+	}
+
+	var p models.Product
+	if err := h.DB.First(&p, productID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			http.NotFound(w, r)
+			return
+		}
+		http.Error(w, "db error", http.StatusInternalServerError)
+		return
+	}
+
+	if in.IsPrimary {
+		_ = h.DB.Model(&models.ProductImage{}).
+			Where("product_id = ?", productID).
+			Update("is_primary", false).Error
+	}
+
+	img := models.ProductImage{
+		ProductID: productID,
+		ImageURL:  in.ImageURL,
+		IsPrimary: in.IsPrimary,
+	}
+	if err := h.DB.Create(&img).Error; err != nil {
+		http.Error(w, "db error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(img)
 }

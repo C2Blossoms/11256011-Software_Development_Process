@@ -1,6 +1,6 @@
 module github.com/C2Blossoms/Project_SDP/backend
 
-go 1.25.1
+go 1.23
 
 require (
 	github.com/gofiber/fiber/v2 v2.52.9

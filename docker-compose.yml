@@ -32,10 +32,9 @@ services:
       REFRESH_TTL_DAY: ${REFRESH_TTL_DAY}
       DB_AUTOMIGRATE: ${DB_AUTOMIGRATE}
     ports:
-      - "8080:8080"
-    depends_on:
-      mysql:
-        condition: service_healthy
+      - "8000:8000"
+    volumes:
+      - ./backend/uploads:/app/uploads
     restart: unless-stopped
     init: true
 
@@ -49,7 +48,7 @@ services:
       - NEXT_PUBLIC_FRONTEND_ORIGIN=http://localhost:3000
     command: ["npm","start","--","-H","0.0.0.0","-p","3000"]
     ports:
-      - "3000:3000"
+      - "8080:3000"
     depends_on:
       - backend
     restart: unless-stopped
@@ -72,19 +71,19 @@ services:
     restart: unless-stopped
     init: true
 
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin:5.2
-    env_file: .env
-    environment:
-      PMA_HOST: mysql
-      PMA_PORT: ${MYSQL_PORT}
-      UPLOAD_LIMIT: ${UPLOAD_LIMIT}
-    ports:
-      - "${PHPMYADMIN_PORT}:80"
-    depends_on:
-      mysql:
-        condition: service_healthy
-    restart: unless-stopped
+  # phpmyadmin:
+  #   image: phpmyadmin/phpmyadmin:5.2
+  #   env_file: .env
+  #   environment:
+  #     PMA_HOST: mysql
+  #     PMA_PORT: ${MYSQL_PORT}
+  #     UPLOAD_LIMIT: ${UPLOAD_LIMIT}
+  #   ports:
+  #     - "${PHPMYADMIN_PORT}:80"
+  #   depends_on:
+  #     mysql:
+  #       condition: service_healthy
+  #   restart: unless-stopped
 
-volumes:
-  mysql_data:
+# volumes:
+#   mysql_data:
